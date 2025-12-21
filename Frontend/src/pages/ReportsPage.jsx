@@ -199,14 +199,52 @@ export default function ReportsPage() {
   }
 
   // -------------------------
-  // Book Orders Count lookup (mock for now)
+  // Book Orders Count lookup
   // -------------------------
   const [isbnQuery, setIsbnQuery] = useState('');
-  const [ordersCount, setOrdersCount] = useState(5);
 
-  function runBookOrdersCount() {
-    if (!isbnQuery.trim()) return;
-    setOrdersCount((prev) => (prev % 9) + 1);
+  const [bookOrders, setBookOrders] = useState({
+    loading: false,
+    book: null,
+    times_ordered: 0,
+    total_qty_ordered: 0,
+    last_ordered_at: null,
+    error: null,
+  });
+
+  async function runBookOrdersCount() {
+    const q = isbnQuery.trim();
+    if (!q) return;
+
+    try {
+      setBookOrders((p) => ({ ...p, loading: true, error: null }));
+
+      const res = await fetch(
+        `http://localhost:3000/api/admin/reports/book-orders-count?q=${encodeURIComponent(
+          q
+        )}`
+      );
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        throw new Error(data?.error || 'Failed to load book orders count');
+      }
+
+      setBookOrders({
+        loading: false,
+        book: data.book || null,
+        times_ordered: Number(data.times_ordered ?? 0),
+        total_qty_ordered: Number(data.total_qty_ordered ?? 0),
+        last_ordered_at: data.last_ordered_at || null,
+        error: null,
+      });
+    } catch (e) {
+      setBookOrders((p) => ({
+        ...p,
+        loading: false,
+        error: e.message || 'Unknown error',
+      }));
+    }
   }
 
   // -------------------------
@@ -491,22 +529,7 @@ export default function ReportsPage() {
             title="Top 5 Customers"
             right={
               <div className="rpPills">
-                <button
-                  className={`rpPill ${
-                    topCustomersData.months === 12 ? 'rpPillActive' : ''
-                  }`}
-                  type="button"
-                  onClick={() => loadTopCustomers(12, 5)}
-                >
-                  This year
-                </button>
-                <button
-                  className={`rpPill ${
-                    topCustomersData.months === 3 ? 'rpPillActive' : ''
-                  }`}
-                  type="button"
-                  onClick={() => loadTopCustomers(3, 5)}
-                >
+                <button className="rpPill rpPillActive" type="button" disabled>
                   Last 3 months
                 </button>
               </div>
@@ -592,10 +615,35 @@ export default function ReportsPage() {
             </div>
 
             <div className="rpBigStat">
-              <div className="rpBigNum">{ordersCount}</div>
+              <div className="rpBigNum">
+                {bookOrders.loading ? '...' : bookOrders.times_ordered}
+              </div>
+
               <div>
-                <div className="rpBigTitle">Times Ordered</div>
-                <div className="rpHint">Last ordered • Apr 22 (mock)</div>
+                <div className="rpBigTitle">
+                  Times Ordered
+                  {bookOrders.book?.title ? ` • ${bookOrders.book.title}` : ''}
+                </div>
+
+                <div className="rpHint">
+                  {bookOrders.loading
+                    ? 'Loading...'
+                    : bookOrders.error
+                    ? bookOrders.error
+                    : bookOrders.last_ordered_at
+                    ? `Last ordered • ${new Date(
+                        bookOrders.last_ordered_at
+                      ).toLocaleDateString()}`
+                    : 'No replenishment orders yet'}
+                </div>
+
+                {!bookOrders.loading &&
+                  !bookOrders.error &&
+                  bookOrders.book && (
+                    <div className="rpHint">
+                      Total qty ordered: {bookOrders.total_qty_ordered}
+                    </div>
+                  )}
               </div>
             </div>
           </div>

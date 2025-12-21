@@ -321,6 +321,76 @@ app.get('/api/admin/reports/top-books', async (req, res) => {
     res.status(500).json({ ok: false, error: error.message });
   }
 });
+app.get('/api/admin/reports/book-orders-count', async (req, res) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    if (!q) {
+      return res
+        .status(400)
+        .json({ ok: false, error: 'q is required (ISBN or title)' });
+    }
+
+    const isIsbn = /^\d{13}$/.test(q);
+
+    let isbn = null;
+
+    if (isIsbn) {
+      isbn = q;
+      const [exists] = await pool.query(
+        'SELECT isbn, title FROM books WHERE isbn = ? LIMIT 1',
+        [isbn]
+      );
+      if (exists.length === 0) {
+        return res
+          .status(404)
+          .json({ ok: false, error: 'Book not found for this ISBN' });
+      }
+    } else {
+      // title search (best match)
+      const [found] = await pool.query(
+        `SELECT isbn, title
+         FROM books
+         WHERE title LIKE CONCAT('%', ?, '%')
+         ORDER BY (title = ?) DESC, LENGTH(title) ASC
+         LIMIT 1`,
+        [q, q]
+      );
+
+      if (found.length === 0) {
+        return res
+          .status(404)
+          .json({ ok: false, error: 'No book matches this title' });
+      }
+
+      isbn = found[0].isbn;
+    }
+
+    const [[book]] = await pool.query(
+      'SELECT isbn, title FROM books WHERE isbn = ? LIMIT 1',
+      [isbn]
+    );
+
+    const [[stats]] = await pool.query(
+      `SELECT
+         COUNT(*) AS times_ordered,
+         SUM(order_qty) AS total_qty_ordered,
+         MAX(created_at) AS last_ordered_at
+       FROM publisher_orders
+       WHERE isbn = ?`,
+      [isbn]
+    );
+
+    res.json({
+      ok: true,
+      book,
+      times_ordered: Number(stats.times_ordered || 0),
+      total_qty_ordered: Number(stats.total_qty_ordered || 0),
+      last_ordered_at: stats.last_ordered_at, // can be null
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
 
 /******************************************************************
  * Start server
