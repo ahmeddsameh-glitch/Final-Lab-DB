@@ -32,17 +32,9 @@ function TableCard({ title, right, children }) {
 }
 
 export default function ReportsPage() {
-  const topCustomers = useMemo(
-    () => [
-      { rank: 1, name: 'Ahmed Sameh', spent: 385, orders: 2 },
-      { rank: 2, name: 'Samir Ali', spent: 230, orders: 1 },
-      { rank: 3, name: 'Yasmeen Khalid', spent: 120, orders: 1 },
-      { rank: 4, name: 'Sara Amin', spent: 90, orders: 1 },
-      { rank: 5, name: 'Khaled Hussein', spent: 75, orders: 1 },
-    ],
-    []
-  );
-
+  // -------------------------
+  // MOCK (Top Books) for now
+  // -------------------------
   const topBooks = useMemo(
     () => [
       { label: 'Cosmos', value: 45 },
@@ -71,15 +63,52 @@ export default function ReportsPage() {
 
   const [openTop10, setOpenTop10] = useState(false);
 
-  const [day, setDay] = useState(() => {
-    const d = new Date();
-    return d.toISOString().slice(0, 10);
+  // -------------------------
+  // Sales By Day (API)
+  // -------------------------
+  const [day, setDay] = useState(() => new Date().toISOString().slice(0, 10));
+
+  const [salesByDay, setSalesByDay] = useState({
+    loading: false,
+    total_sales: 0,
+    orders_count: 0,
+    items_sold: 0,
+    error: null,
   });
 
-  const [isbnQuery, setIsbnQuery] = useState('');
-  const [ordersCount, setOrdersCount] = useState(5);
+  async function runSalesByDay() {
+    try {
+      setSalesByDay((p) => ({ ...p, loading: true, error: null }));
 
-  // ✅ Previous-month report state
+      const res = await fetch(
+        `http://localhost:3000/api/admin/reports/sales/by-day?date=${encodeURIComponent(
+          day
+        )}`
+      );
+      const data = await res.json();
+
+      if (!res.ok || !data.ok)
+        throw new Error(data.error || 'Failed to load sales by day');
+
+      setSalesByDay({
+        loading: false,
+        total_sales: Number(data.total_sales ?? 0),
+        orders_count: Number(data.orders_count ?? 0),
+        items_sold: Number(data.items_sold ?? 0),
+        error: null,
+      });
+    } catch (e) {
+      setSalesByDay((p) => ({
+        ...p,
+        loading: false,
+        error: e.message || 'Unknown error',
+      }));
+    }
+  }
+
+  // -------------------------
+  // Previous Month Sales (API)
+  // -------------------------
   const [prevMonth, setPrevMonth] = useState({
     loading: true,
     total_sales: 0,
@@ -88,34 +117,17 @@ export default function ReportsPage() {
     error: null,
   });
 
-  // donut percent values
-  const total = topBooks.reduce((s, x) => s + x.value, 0);
-  const p = topBooks.map((x) => Math.round((x.value / total) * 100));
-
-  function runSalesByDay() {
-    alert(`Run Sales By Day for ${day} (mock)`);
-  }
-
-  function runBookOrdersCount() {
-    if (!isbnQuery.trim()) return;
-    setOrdersCount((prev) => (prev % 9) + 1);
-  }
-
-  // ✅ Fetch previous-month report (used on load + refresh)
   async function loadPreviousMonth() {
     try {
       setPrevMonth((p) => ({ ...p, loading: true, error: null }));
 
-      // If you already use a proxy, you can change this to:
-      // '/api/admin/reports/sales/previous-month'
       const res = await fetch(
         'http://localhost:3000/api/admin/reports/sales/previous-month'
       );
       const data = await res.json();
 
-      if (!res.ok || !data.ok) {
+      if (!res.ok || !data.ok)
         throw new Error(data.error || 'Failed to load previous month report');
-      }
 
       setPrevMonth({
         loading: false,
@@ -133,10 +145,84 @@ export default function ReportsPage() {
     }
   }
 
+  // -------------------------
+  // Top Customers (API)
+  // backend returns ONLY:
+  // [{ rank, name, total_spent, orders_count }]
+  // -------------------------
+  const [topCustomersData, setTopCustomersData] = useState({
+    loading: true,
+    months: 3,
+    customers: [],
+    top_customer: null,
+    error: null,
+  });
+
+  async function loadTopCustomers(months = 3, limit = 5) {
+    try {
+      setTopCustomersData((p) => ({
+        ...p,
+        loading: true,
+        error: null,
+        months,
+      }));
+
+      const res = await fetch(
+        `http://localhost:3000/api/admin/reports/top-customers?months=${months}&limit=${limit}`
+      );
+      const data = await res.json();
+
+      if (!res.ok || !data.ok)
+        throw new Error(data.error || 'Failed to load top customers');
+
+      setTopCustomersData({
+        loading: false,
+        months: data.months,
+        customers: data.customers || [],
+        top_customer: data.top_customer || null,
+        error: null,
+      });
+    } catch (e) {
+      setTopCustomersData((p) => ({
+        ...p,
+        loading: false,
+        error: e.message || 'Unknown error',
+      }));
+    }
+  }
+
+  // -------------------------
+  // Book Orders Count (mock for now)
+  // -------------------------
+  const [isbnQuery, setIsbnQuery] = useState('');
+  const [ordersCount, setOrdersCount] = useState(5);
+
+  function runBookOrdersCount() {
+    if (!isbnQuery.trim()) return;
+    setOrdersCount((prev) => (prev % 9) + 1);
+  }
+
+  // -------------------------
+  // Donut percent values (mock)
+  // -------------------------
+  const total = topBooks.reduce((s, x) => s + x.value, 0);
+  const p = topBooks.map((x) => Math.round((x.value / total) * 100));
+
+  // -------------------------
+  // On page load
+  // -------------------------
   useEffect(() => {
     loadPreviousMonth();
+    runSalesByDay();
+    loadTopCustomers(3, 5);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Refresh button should reload the “real” reports
+  async function handleRefresh() {
+    await loadPreviousMonth();
+    await loadTopCustomers(topCustomersData.months, 5);
+  }
 
   return (
     <div className="rpShell">
@@ -163,13 +249,16 @@ export default function ReportsPage() {
               Export CSV
             </button>
 
-            {/* ✅ Refresh now triggers API reload */}
             <button
               className="rpBtn rpBtnPrimary"
               type="button"
-              onClick={loadPreviousMonth}
-              disabled={prevMonth.loading}
-              title={prevMonth.loading ? 'Loading...' : 'Refresh'}
+              onClick={handleRefresh}
+              disabled={prevMonth.loading || topCustomersData.loading}
+              title={
+                prevMonth.loading || topCustomersData.loading
+                  ? 'Loading...'
+                  : 'Refresh'
+              }
             >
               <RefreshCcw size={18} />
               Refresh
@@ -181,14 +270,14 @@ export default function ReportsPage() {
         <div className="rpGrid">
           {/* KPI grid */}
           <div className="rpKpis">
-            {/* ✅ Previous month KPI now uses API data */}
+            {/* Previous Month Sales (API) */}
             <KpiCard
               tone="accent"
               title="Previous Month Sales"
               value={
                 prevMonth.loading
                   ? 'Loading...'
-                  : `$${prevMonth.total_sales.toFixed(2)}`
+                  : `$${Number(prevMonth.total_sales).toFixed(2)}`
               }
               subLeft={
                 prevMonth.loading
@@ -200,17 +289,23 @@ export default function ReportsPage() {
                   ? '— items sold'
                   : `${prevMonth.items_sold} items sold`
               }
-              right={prevMonth.error ? 'Error' : '+2.08%'}
+              right={prevMonth.error ? 'Error' : 'Last Month'}
             />
 
+            {/* Sales By Day (API) */}
             <div className="rpCard rpKpi">
               <div className="rpKpiTop">
                 <div className="rpKpiTitle">Sales By Day</div>
-                <div className="rpKpiBadge rpKpiBadge--good">+12.4%</div>
+                <div className="rpKpiBadge rpKpiBadge--good">Daily</div>
               </div>
 
               <div className="rpKpiRow">
-                <div className="rpKpiValue">$230.00</div>
+                <div className="rpKpiValue">
+                  {salesByDay.loading
+                    ? 'Loading...'
+                    : `$${Number(salesByDay.total_sales).toFixed(2)}`}
+                </div>
+
                 <button
                   className="rpBtn rpBtnPrimary rpBtnWide"
                   onClick={runSalesByDay}
@@ -227,22 +322,52 @@ export default function ReportsPage() {
                   onChange={(e) => setDay(e.target.value)}
                 />
                 <div className="rpKpiMini">
-                  <span>1 orders</span>
+                  <span>
+                    {salesByDay.loading
+                      ? '— orders'
+                      : `${salesByDay.orders_count} orders`}
+                  </span>
                   <span className="rpDot" />
-                  <span>6 items sold</span>
+                  <span>
+                    {salesByDay.loading
+                      ? '— items'
+                      : `${salesByDay.items_sold} items sold`}
+                  </span>
                 </div>
               </div>
+
+              {salesByDay.error && (
+                <div className="rpHint">{salesByDay.error}</div>
+              )}
             </div>
 
+            {/* Top Customer KPI (API from top-customers) */}
             <KpiCard
               tone="plain"
-              title="Top Customer (3 months)"
-              value="$385.00"
-              subLeft="Ahmed Sameh"
-              subRight="2 orders"
-              right="+5.2%"
+              title={`Top Customer (${topCustomersData.months} months)`}
+              value={
+                topCustomersData.loading
+                  ? 'Loading...'
+                  : `$${Number(
+                      topCustomersData.top_customer?.total_spent ?? 0
+                    ).toFixed(2)}`
+              }
+              subLeft={
+                topCustomersData.loading
+                  ? '—'
+                  : topCustomersData.top_customer?.name || '—'
+              }
+              subRight={
+                topCustomersData.loading
+                  ? '— orders'
+                  : `${Number(
+                      topCustomersData.top_customer?.orders_count ?? 0
+                    )} orders`
+              }
+              right={topCustomersData.error ? 'Error' : 'Top'}
             />
 
+            {/* Top Book KPI (still mock) */}
             <KpiCard
               tone="plain"
               title="Top Book (3 months)"
@@ -253,7 +378,7 @@ export default function ReportsPage() {
             />
           </div>
 
-          {/* Donut / Product statistics */}
+          {/* Donut / Product statistics (mock for now) */}
           <div className="rpCard rpSide">
             <div className="rpCardHead">
               <div>
@@ -306,15 +431,27 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          {/* Bottom left: Top Customers table */}
+          {/* Bottom left: Top Customers table (API) */}
           <TableCard
             title="Top 5 Customers"
             right={
               <div className="rpPills">
-                <button className="rpPill rpPillActive" type="button">
+                <button
+                  className={`rpPill ${
+                    topCustomersData.months === 12 ? 'rpPillActive' : ''
+                  }`}
+                  type="button"
+                  onClick={() => loadTopCustomers(12, 5)}
+                >
                   This year
                 </button>
-                <button className="rpPill" type="button">
+                <button
+                  className={`rpPill ${
+                    topCustomersData.months === 3 ? 'rpPillActive' : ''
+                  }`}
+                  type="button"
+                  onClick={() => loadTopCustomers(3, 5)}
+                >
                   Last 3 months
                 </button>
               </div>
@@ -329,31 +466,53 @@ export default function ReportsPage() {
                   <th>Orders</th>
                 </tr>
               </thead>
+
               <tbody>
-                {topCustomers.map((c) => (
-                  <tr key={c.rank}>
-                    <td className="rpTdRank">{c.rank}</td>
-                    <td>
-                      <div className="rpPerson">
-                        <div className="rpMiniAvatar">
-                          {c.name
-                            .split(' ')
-                            .map((s) => s[0])
-                            .slice(0, 2)
-                            .join('')}
-                        </div>
-                        <div className="rpPersonName">{c.name}</div>
-                      </div>
+                {topCustomersData.loading ? (
+                  <tr>
+                    <td colSpan={4} style={{ opacity: 0.7, padding: 14 }}>
+                      Loading...
                     </td>
-                    <td>${c.spent.toFixed(2)}</td>
-                    <td>{c.orders}</td>
                   </tr>
-                ))}
+                ) : topCustomersData.error ? (
+                  <tr>
+                    <td colSpan={4} style={{ opacity: 0.7, padding: 14 }}>
+                      {topCustomersData.error}
+                    </td>
+                  </tr>
+                ) : topCustomersData.customers.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ opacity: 0.7, padding: 14 }}>
+                      No data
+                    </td>
+                  </tr>
+                ) : (
+                  topCustomersData.customers.map((c) => (
+                    <tr key={c.rank}>
+                      <td className="rpTdRank">{c.rank}</td>
+                      <td>
+                        <div className="rpPerson">
+                          <div className="rpMiniAvatar">
+                            {String(c.name || '?')
+                              .split(' ')
+                              .map((s) => s[0])
+                              .slice(0, 2)
+                              .join('')
+                              .toUpperCase()}
+                          </div>
+                          <div className="rpPersonName">{c.name}</div>
+                        </div>
+                      </td>
+                      <td>${Number(c.total_spent ?? 0).toFixed(2)}</td>
+                      <td>{c.orders_count}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </TableCard>
 
-          {/* Bottom right: Book Orders Count lookup */}
+          {/* Bottom right: Book Orders Count lookup (mock for now) */}
           <div className="rpCard rpGrowth">
             <div className="rpCardHead">
               <div>
@@ -387,7 +546,7 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* Modal: Top 10 Books */}
+        {/* Modal: Top 10 Books (mock for now) */}
         {openTop10 && (
           <div className="rpModalBackdrop" onClick={() => setOpenTop10(false)}>
             <div className="rpModal" onClick={(e) => e.stopPropagation()}>
