@@ -12,11 +12,12 @@ export default function CategoryPicker({
   const safeItems = useMemo(() => {
     if (Array.isArray(items) && items.length) return items;
     return [
-      { id: 'all', label: 'All' },
-      { id: 'fiction', label: 'Fiction' },
-      { id: 'nonfiction', label: 'Non-fiction' },
-      { id: 'mystery', label: 'Mystery' },
-      { id: 'scifi', label: 'Sci-Fi & Fantasy' },
+      { id: 'all', label: 'All Genre' },
+      { id: 'Science', label: 'Science' },
+      { id: 'Art', label: 'Art' },
+      { id: 'Religion', label: 'Religion' },
+      { id: 'History', label: 'History' },
+      { id: 'Geography', label: 'Geography' },
     ];
   }, [items]);
 

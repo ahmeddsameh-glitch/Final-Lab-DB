@@ -132,3 +132,14 @@
   font-size: 13px;
   color: rgba(239, 68, 68, 0.95);
 }
+.bkStock {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #666;
+}
+
+.bkLowStock {
+  margin-left: 6px;
+  color: #c0392b;
+  font-weight: 600;
+}
