@@ -4,24 +4,25 @@ const pool = require('../db');
 const router = express.Router();
 
 /**
- * GET list books with search and filters
- * GET /api/books?q=search&category=category&author=author&publisher=publisher&limit=20&offset=0
+ * POST search/list books with filters
+ * POST /api/books
+ * Body: { q, category, author, publisher, limit, offset }
  * 
- * a) Search by ISBN, Title, or Author name
+ * a) Search by ISBN, Title, or Author name (via q parameter)
  * b) Filter by Category, Author, or Publisher
  * c) Returns book details and availability status
  */
-router.get('/', async (req, res) => {
+router.post('/', async (req, res) => {
     try {
-        // ---- 1) Read query params (all optional) ----
-        const q = String(req.query.q || '').trim(); // search text (ISBN, title, author)
-        const category = String(req.query.category || '').trim(); // category filter
-        const author = String(req.query.author || '').trim(); // author filter
-        const publisher = String(req.query.publisher || '').trim(); // publisher filter
+        // ---- 1) Read body params (all optional) ----
+        const q = String(req.body.q || '').trim(); // search text (ISBN, title, author)
+        const category = String(req.body.category || '').trim(); // category filter
+        const author = String(req.body.author || '').trim(); // author filter
+        const publisher = String(req.body.publisher || '').trim(); // publisher filter
 
         // pagination (safe defaults)
-        const limit = Math.min(Number(req.query.limit || 20), 100);
-        const offset = Math.max(Number(req.query.offset || 0), 0);
+        const limit = Math.min(Number(req.body.limit || 20), 100);
+        const offset = Math.max(Number(req.body.offset || 0), 0);
 
         // ---- 2) Build SQL dynamically, but SAFELY ----
         // We use placeholders (?) to prevent SQL injection.

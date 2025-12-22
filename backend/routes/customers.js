@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const pool = require('../db');
+const { verifyCustomer } = require('../middleware/auth');
 
 const router = express.Router();
 // --- Helpers ---
@@ -24,7 +25,7 @@ async function getOrCreateCart(customerId) {
  * 1) Update customer profile (NO password)
  * PUT /api/customers/:id
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', verifyCustomer, async (req, res) => {
     try {
         const id = Number(req.params.id);
         const { first_name, last_name, email, phone, shipping_address } = req.body;
@@ -57,7 +58,7 @@ router.put('/:id', async (req, res) => {
  * 2) Change password
  * PUT /api/customers/:id/password
  */
-router.put('/:id/password', async (req, res) => {
+router.put('/:id/password', verifyCustomer, async (req, res) => {
     try {
         const id = Number(req.params.id);
         const { old_password, new_password } = req.body;
@@ -96,7 +97,7 @@ router.put('/:id/password', async (req, res) => {
  * 3) View cart
  * GET /api/customers/:id/cart
  */
-router.get('/:id/cart', async (req, res) => {
+router.get('/:id/cart', verifyCustomer, async (req, res) => {
     try {
         const id = Number(req.params.id);
 
@@ -125,7 +126,7 @@ router.get('/:id/cart', async (req, res) => {
  * 4) Add item to cart
  * POST /api/customers/:id/cart
  */
-router.post('/:id/cart', async (req, res) => {
+router.post('/:id/cart', verifyCustomer, async (req, res) => {
     try {
         const id = Number(req.params.id);
         const { isbn, qty } = req.body;
@@ -159,7 +160,7 @@ router.post('/:id/cart', async (req, res) => {
  * 5) Remove item from cart
  * DELETE /api/customers/:id/cart/:isbn
  */
-router.delete('/:id/cart/:isbn', async (req, res) => {
+router.delete('/:id/cart/:isbn', verifyCustomer, async (req, res) => {
     try {
         const id = Number(req.params.id);
         const isbn = req.params.isbn;
@@ -181,8 +182,7 @@ router.delete('/:id/cart/:isbn', async (req, res) => {
  * 6) Checkout
  * POST /api/customers/:id/checkout
  */
-
-router.post('/:id/checkout', async (req, res) => {
+router.post('/:id/checkout', verifyCustomer, async (req, res) => {
     const conn = await pool.getConnection();
     try {
         const customerId = Number(req.params.id);
@@ -339,7 +339,7 @@ router.post('/:id/checkout', async (req, res) => {
  * 7) View past orders
  * GET /api/customers/:id/orders
  */
-router.get('/:id/orders', async (req, res) => {
+router.get('/:id/orders', verifyCustomer, async (req, res) => {
     try {
         const id = Number(req.params.id);
 
@@ -358,7 +358,7 @@ router.get('/:id/orders', async (req, res) => {
  * 8) Logout (clear cart)
  * POST /api/customers/:id/logout
  */
-router.post('/:id/logout', async (req, res) => {
+router.post('/:id/logout', verifyCustomer, async (req, res) => {
     try {
         const id = Number(req.params.id);
 
