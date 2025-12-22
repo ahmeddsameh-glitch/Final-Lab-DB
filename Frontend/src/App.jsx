@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-
+import OrdersPage from './pages/OrdersPage.jsx';
 // Layouts
 import AdminLayout from './layouts/AdminLayout.jsx';
 import CustomerLayout from './layouts/CustomerLayout.jsx';
@@ -97,6 +97,7 @@ export default function App() {
         <Route index element={<Navigate to="books" replace />} />
         <Route path="books" element={<BooksPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="orders" element={<OrdersPage />} />
         <Route
           path="customers"
           element={<Placeholder title="Customers Management" />}
