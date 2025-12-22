@@ -3,53 +3,91 @@ const pool = require('../db');
 
 const router = express.Router();
 
+/**
+ * GET list books with search and filters
+ * GET /api/books?q=search&category=category&author=author&publisher=publisher&limit=20&offset=0
+ * 
+ * a) Search by ISBN, Title, or Author name
+ * b) Filter by Category, Author, or Publisher
+ * c) Returns book details and availability status
+ */
 router.get('/', async (req, res) => {
     try {
         // ---- 1) Read query params (all optional) ----
-        const q = String(req.query.q || '').trim(); // search text
+        const q = String(req.query.q || '').trim(); // search text (ISBN, title, author)
         const category = String(req.query.category || '').trim(); // category filter
+        const author = String(req.query.author || '').trim(); // author filter
+        const publisher = String(req.query.publisher || '').trim(); // publisher filter
 
         // pagination (safe defaults)
-        //“Give me only 20 books”
-        //OFFSET 0	“Start from the first book”
         const limit = Math.min(Number(req.query.limit || 20), 100);
         const offset = Math.max(Number(req.query.offset || 0), 0);
 
         // ---- 2) Build SQL dynamically, but SAFELY ----
         // We use placeholders (?) to prevent SQL injection.
-        let sql = `SELECT * FROM books`;
+        // JOIN with authors and publishers tables for comprehensive search
+        let sql = `
+            SELECT DISTINCT
+                b.isbn,
+                b.title,
+                b.publisher_id,
+                b.publication_year,
+                b.selling_price,
+                b.category,
+                b.stock_qty,
+                b.threshold,
+                b.cover_url,
+                b.created_at,
+                p.name as publisher_name
+            FROM books b
+            LEFT JOIN book_authors ba ON b.isbn = ba.isbn
+            LEFT JOIN authors a ON ba.author_id = a.id
+            LEFT JOIN publishers p ON b.publisher_id = p.id
+            WHERE 1=1
+        `;
         const params = [];
-        const where = [];
 
-        // NOTE: These column names might differ in your schema.
-        // We’ll adjust them after you send DESCRIBE books.
+        // Search: ISBN, title, or author name
         if (q) {
-            // assumes columns: title OR isbn
-            where.push(`(title LIKE ? OR isbn LIKE ?)`);
-            params.push(`%${q}%`, `%${q}%`);
+            sql += ` AND (b.title LIKE ? OR b.isbn LIKE ? OR a.full_name LIKE ?)`;
+            params.push(`%${q}%`, `%${q}%`, `%${q}%`);
         }
 
+        // Filter by category
         if (category) {
-            // assumes column: category
-            where.push(`category = ?`);
+            sql += ` AND b.category = ?`;
             params.push(category);
         }
 
-        if (where.length) sql += ` WHERE ` + where.join(' AND ');
+        // Filter by author name
+        if (author) {
+            sql += ` AND a.full_name = ?`;
+            params.push(author);
+        }
 
-        sql += ` ORDER BY created_at DESC, isbn DESC LIMIT ? OFFSET ?`;
+        // Filter by publisher name
+        if (publisher) {
+            sql += ` AND p.name = ?`;
+            params.push(publisher);
+        }
+
+        sql += ` ORDER BY b.created_at DESC, b.isbn DESC LIMIT ? OFFSET ?`;
         params.push(limit, offset);
 
         // ---- 3) Run query ----
         const [rows] = await pool.query(sql, params);
 
-        // ---- 4) Return consistent JSON ----
+        // ---- 4) Return consistent JSON with book details and availability ----
         res.json({
             ok: true,
             count: rows.length,
             limit,
             offset,
-            data: rows,
+            data: rows.map(book => ({
+                ...book,
+                available: book.stock_qty > 0, // availability indicator
+                inStock: book.stock_qty,
+            })),
         });
     } catch (error) {
         res.status(500).json({ ok: false, error: error.message });
@@ -59,6 +97,7 @@ router.get('/', async (req, res) => {
 /**
  * GET book by ISBN
  * GET /api/books/:isbn
+ * Returns book details and availability
  */
 router.get('/:isbn', async (req, res) => {
     try {
@@ -76,9 +115,14 @@ router.get('/:isbn', async (req, res) => {
             });
         }
 
+        const book = rows[0];
         res.json({
             ok: true,
-            data: rows[0],
+            data: {
+                ...book,
+                available: book.stock_qty > 0, // availability indicator
+                inStock: book.stock_qty,
+            },
         });
     } catch (error) {
         res.status(500).json({
