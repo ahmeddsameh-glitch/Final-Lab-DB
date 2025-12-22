@@ -1,26 +1,22 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+// REMOVED: import { useNavigate } from 'react-router-dom'; (Not needed anymore)
 import '../Styles/LoginPage.css';
 import bookphoto from '../assets/bookphoto2.jpeg';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000';
 
-export default function LoginPage() {
-  const [mode, setMode] = useState('login'); // "login" | "signup"
+export default function LoginPage({ onLogin }) {
+  const [mode, setMode] = useState('login');
   const isSignup = mode === 'signup';
-  const navigate = useNavigate();
+  // REMOVED: const navigate = useNavigate(); (App.jsx handles redirection)
 
-  // -----------------------
-  // LOGIN STATE
-  // -----------------------
+  // Login State
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPass, setLoginPass] = useState('');
   const [loginErr, setLoginErr] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // -----------------------
-  // SIGNUP STATE (matches backend auth.js)
-  // -----------------------
+  // Signup State
   const [suUsername, setSuUsername] = useState('');
   const [suFirst, setSuFirst] = useState('');
   const [suLast, setSuLast] = useState('');
@@ -31,12 +27,7 @@ export default function LoginPage() {
   const [suErr, setSuErr] = useState('');
   const [suLoading, setSuLoading] = useState(false);
 
-  const bgStyle = useMemo(
-    () => ({
-      backgroundImage: `url(${bookphoto})`,
-    }),
-    []
-  );
+  const bgStyle = useMemo(() => ({ backgroundImage: `url(${bookphoto})` }), []);
 
   const switchToLogin = () => {
     setMode('login');
@@ -55,6 +46,7 @@ export default function LoginPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      credentials: 'include',
     });
 
     const data = await res.json().catch(() => ({}));
@@ -75,11 +67,9 @@ export default function LoginPage() {
         username: loginUsername.trim(),
         password: loginPass,
       });
-
-      localStorage.setItem('auth_ok', '1');
-      localStorage.setItem('customer_id', String(data.customer_id));
-
-      navigate('/books');
+      if (onLogin) {
+        onLogin(data.user);
+      }
     } catch (err) {
       setLoginErr(err.message || 'Login failed');
     } finally {
@@ -93,7 +83,7 @@ export default function LoginPage() {
     setSuLoading(true);
 
     try {
-      const data = await postJSON(`${API_BASE}/api/auth/signup`, {
+      await postJSON(`${API_BASE}/api/auth/signup`, {
         username: suUsername.trim(),
         password: suPass,
         first_name: suFirst.trim(),
@@ -103,9 +93,6 @@ export default function LoginPage() {
         shipping_address: suAddress.trim(),
       });
 
-      // Your backend currently returns only { ok:true, message }
-      // so we just switch to login after successful signup.
-      // (If you later return customer_id, you can auto-login.)
       switchToLogin();
     } catch (err) {
       setSuErr(err.message || 'Signup failed');
@@ -116,15 +103,14 @@ export default function LoginPage() {
 
   return (
     <div className="authPage" style={bgStyle}>
+      {/* ... (The rest of your JSX remains exactly the same) ... */}
       <div className="authOverlay" />
-
       <div className={`authCard ${isSignup ? 'isSignup' : ''}`}>
         <div className="authTop">
           <div className="authBrand">
             <span className="authDot" />
             <span className="authBrandText">BookStore</span>
           </div>
-
           <div className="authQuickActions">
             <button
               className={`authPill ${!isSignup ? 'active' : ''}`}
@@ -144,13 +130,11 @@ export default function LoginPage() {
         </div>
 
         <div className="authBody">
-          {/* LEFT */}
           <section className="authPanel authPanelLeft">
-            {/* Login */}
+            {/* LOGIN FORM */}
             <div className={`authFormWrap ${!isSignup ? 'show' : 'hide'}`}>
               <h1 className="authTitle">Welcome back</h1>
               <p className="authSub">Login with your account.</p>
-
               <form className="authForm" onSubmit={onLoginSubmit}>
                 <label className="authLabel">
                   Username
@@ -163,7 +147,6 @@ export default function LoginPage() {
                     required
                   />
                 </label>
-
                 <label className="authLabel">
                   Password
                   <input
@@ -175,9 +158,7 @@ export default function LoginPage() {
                     required
                   />
                 </label>
-
-                {loginErr ? <div className="authError">{loginErr}</div> : null}
-
+                {loginErr && <div className="authError">{loginErr}</div>}
                 <button
                   className="authBtnPrimary"
                   type="submit"
@@ -188,26 +169,23 @@ export default function LoginPage() {
               </form>
             </div>
 
-            {/* Signup */}
+            {/* SIGNUP FORM */}
             <div className={`authFormWrap ${isSignup ? 'show' : 'hide'}`}>
               <h1 className="authTitle">Create account</h1>
               <p className="authSub">Fill your details to sign up.</p>
-
               <form className="authForm" onSubmit={onSignupSubmit}>
-                {/* Username + Phone */}
                 <div className="authGrid2">
                   <label className="authLabel">
                     Username
                     <input
                       className="authInput"
                       type="text"
-                      placeholder="ahmed123"
+                      placeholder="user123"
                       value={suUsername}
                       onChange={(e) => setSuUsername(e.target.value)}
                       required
                     />
                   </label>
-
                   <label className="authLabel">
                     Phone
                     <input
@@ -220,34 +198,30 @@ export default function LoginPage() {
                     />
                   </label>
                 </div>
-
-                {/* First name + Last name */}
                 <div className="authGrid2">
                   <label className="authLabel">
                     First name
                     <input
                       className="authInput"
                       type="text"
-                      placeholder="Ahmed"
+                      placeholder="First"
                       value={suFirst}
                       onChange={(e) => setSuFirst(e.target.value)}
                       required
                     />
                   </label>
-
                   <label className="authLabel">
                     Last name
                     <input
                       className="authInput"
                       type="text"
-                      placeholder="Sameh"
+                      placeholder="Last"
                       value={suLast}
                       onChange={(e) => setSuLast(e.target.value)}
                       required
                     />
                   </label>
                 </div>
-
                 <label className="authLabel">
                   Email
                   <input
@@ -259,33 +233,29 @@ export default function LoginPage() {
                     required
                   />
                 </label>
-
                 <label className="authLabel">
                   Shipping Address
                   <input
                     className="authInput"
                     type="text"
-                    placeholder="Cairo, Egypt"
+                    placeholder="City, Country"
                     value={suAddress}
                     onChange={(e) => setSuAddress(e.target.value)}
                     required
                   />
                 </label>
-
                 <label className="authLabel">
                   Password
                   <input
                     className="authInput"
                     type="password"
-                    placeholder="Create a strong password"
+                    placeholder="Strong password"
                     value={suPass}
                     onChange={(e) => setSuPass(e.target.value)}
                     required
                   />
                 </label>
-
-                {suErr ? <div className="authError">{suErr}</div> : null}
-
+                {suErr && <div className="authError">{suErr}</div>}
                 <button
                   className="authBtnPrimary"
                   type="submit"
@@ -297,11 +267,9 @@ export default function LoginPage() {
             </div>
           </section>
 
-          {/* RIGHT */}
           <aside className="authPanel authPanelRight">
             <div className="authRightInner">
               <div className="authRightBadge">Connected to Backend</div>
-
               <h2 className="authRightTitle">
                 {isSignup ? 'Already have an account?' : 'New here?'}
               </h2>
@@ -310,7 +278,6 @@ export default function LoginPage() {
                   ? 'Switch to login and continue shopping.'
                   : 'Create an account and start browsing books.'}
               </p>
-
               <button
                 className="authBtnGhost"
                 type="button"
@@ -318,11 +285,6 @@ export default function LoginPage() {
               >
                 {isSignup ? 'Go to Login' : 'Go to Signup'}
               </button>
-
-              <div className="authRightFooter">
-                <span className="authTiny">API: {API_BASE}</span>
-                <span className="authTiny">/api/auth</span>
-              </div>
             </div>
           </aside>
         </div>

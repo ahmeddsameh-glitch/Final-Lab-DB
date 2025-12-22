@@ -1,12 +1,35 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const pool = require('../db');
+const { verifyToken } = require('./jwtHelper');
 
 const router = express.Router();
 
-/**
- * POST /api/auth/signup
- */
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_only_for_dev_never_prod';
+
+// --- Helpers ---
+
+function signToken(payload) {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+}
+
+function setAuthCookie(res, token) {
+  res.cookie('access_token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+}
+
+// --- Routes ---
+
+// Check Session
+router.get('/me', verifyToken, (req, res) => {
+  res.json({ ok: true, user: req.user });
+});
+
 router.post('/signup', async (req, res) => {
   try {
     const {
@@ -28,32 +51,25 @@ router.post('/signup', async (req, res) => {
       !phone ||
       !shipping_address
     ) {
-      return res.status(400).json({
-        ok: false,
-        error: 'All fields are required',
-      });
+      return res
+        .status(400)
+        .json({ ok: false, error: 'All fields are required' });
     }
 
     const [existing] = await pool.query(
       `SELECT id FROM customers WHERE username = ? OR email = ?`,
       [username, email]
     );
-
     if (existing.length > 0) {
-      return res.status(409).json({
-        ok: false,
-        error: 'Username or email already exists',
-      });
+      return res
+        .status(409)
+        .json({ ok: false, error: 'Username or email already exists' });
     }
 
     const password_hash = await bcrypt.hash(password, 10);
-
     const [result] = await pool.query(
-      `
-            INSERT INTO customers
-            (username, password_hash, first_name, last_name, email, phone, shipping_address)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        `,
+      `INSERT INTO customers (username, password_hash, first_name, last_name, email, phone, shipping_address)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         username,
         password_hash,
@@ -69,71 +85,76 @@ router.post('/signup', async (req, res) => {
       result.insertId,
     ]);
 
-    res.status(201).json({
-      ok: true,
-      message: 'Account created successfully',
-      customer_id: result.insertId,
-    });
-  } catch (error) {
-    res.status(500).json({ ok: false, error: error.message });
+    const user = { id: result.insertId, role: 'customer', username };
+    const token = signToken({ id: user.id, role: 'customer' });
+
+    setAuthCookie(res, token);
+
+    res.status(201).json({ ok: true, user });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
   }
 });
 
-/**
- * POST /api/auth/login
- */
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // 1) Validate input
-    if (!username || !password) {
-      return res.status(400).json({
-        ok: false,
-        error: 'Username and password are required',
+    // Admin backdoor
+    if (
+      username === process.env.ADMIN_USERNAME &&
+      password === process.env.ADMIN_PASSWORD
+    ) {
+      const token = signToken({ role: 'admin', username: 'admin' });
+      setAuthCookie(res, token);
+      return res.json({
+        ok: true,
+        user: { role: 'admin', username: 'admin' }, // Standardized response
+        admin: true,
+        message: 'Admin login successful',
       });
     }
 
-    // 2) Find user
     const [rows] = await pool.query(
-      `SELECT id, password_hash FROM customers WHERE username = ?`,
+      `SELECT id, password_hash, username FROM customers WHERE username = ?`,
       [username]
     );
 
-    if (rows.length === 0) {
-      return res.status(401).json({
-        ok: false,
-        error: 'Invalid credentials',
-      });
-    }
+    if (rows.length === 0)
+      return res.status(401).json({ ok: false, error: 'Invalid credentials' });
 
     const user = rows[0];
-
-    // 3) Compare password
     const match = await bcrypt.compare(password, user.password_hash);
 
-    if (!match) {
-      return res.status(401).json({
-        ok: false,
-        error: 'Invalid credentials',
-      });
-    }
+    if (!match)
+      return res.status(401).json({ ok: false, error: 'Invalid credentials' });
 
-    // 4) Success
+    const token = signToken({
+      id: user.id,
+      role: 'customer',
+      username: user.username,
+    });
+
+    setAuthCookie(res, token);
+
     res.json({
       ok: true,
-      customer_id: user.id,
+      user: { id: user.id, username: user.username, role: 'customer' },
     });
-  } catch (error) {
-    res.status(500).json({
-      ok: false,
-      error: error.message,
-    });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
   }
 });
 
-module.exports = router;
+router.post('/logout', (req, res) => {
+  res.clearCookie('access_token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+  });
 
-/******************************************************************
- * End of File
- ******************************************************************/
+  return res.json({ ok: true, message: 'Logged out successfully' });
+});
+
+module.exports = router;

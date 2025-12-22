@@ -3,14 +3,27 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const pool = require('./db');
+const cookieParser = require('cookie-parser'); // Import this
 
 const app = express();
 
 // --------------------
 // Middleware
 // --------------------
+
+// 1. COOKIE PARSER (Must be before routes)
+app.use(cookieParser());
+
+// 2. CORS (Must be specific for cookies to work)
+app.use(
+  cors({
+    origin: 'http://localhost:5173', // <--- REPLACE THIS if your React runs on a different port
+    credentials: true, // <--- THIS IS THE KEY FIX
+  })
+);
+
+// 3. JSON Parser
 app.use(express.json());
-app.use(cors());
 
 // --------------------
 // Routes
