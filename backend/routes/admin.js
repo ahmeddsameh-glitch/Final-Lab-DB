@@ -479,4 +479,87 @@ router.put('/books/:isbn', async (req, res) => {
     res.status(500).json({ ok: false, error: error.message });
   }
 });
+// ... existing imports ...
+
+/**
+ * POST /books
+ * Add a new book (Admin Only)
+ */
+router.post('/books', async (req, res) => {
+  try {
+    const {
+      isbn,
+      title,
+      publisher_id,
+      publication_year,
+      selling_price,
+      category,
+      stock_qty,
+      threshold,
+      cover_url,
+    } = req.body;
+
+    // 1. Basic Validation
+    if (!isbn || !title || !publisher_id || !selling_price || !category) {
+      return res
+        .status(400)
+        .json({
+          ok: false,
+          error:
+            'Missing required fields (ISBN, Title, Publisher, Price, Category)',
+        });
+    }
+
+    // 2. Validate Negative Values (Integrity)
+    if (stock_qty < 0 || threshold < 0 || selling_price < 0) {
+      return res
+        .status(400)
+        .json({
+          ok: false,
+          error: 'Stock, Threshold, and Price cannot be negative',
+        });
+    }
+
+    // 3. Check if ISBN already exists
+    const [existing] = await pool.query('SELECT 1 FROM books WHERE isbn = ?', [
+      isbn,
+    ]);
+    if (existing.length > 0) {
+      return res
+        .status(409)
+        .json({ ok: false, error: 'Book with this ISBN already exists' });
+    }
+
+    // 4. Check if Publisher exists (Integrity)
+    const [pub] = await pool.query('SELECT 1 FROM publishers WHERE id = ?', [
+      publisher_id,
+    ]);
+    if (pub.length === 0) {
+      return res.status(400).json({ ok: false, error: 'Invalid Publisher ID' });
+    }
+
+    // 5. Insert Book
+    const sql = `
+            INSERT INTO books 
+            (isbn, title, publisher_id, publication_year, selling_price, category, stock_qty, threshold, cover_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+    await pool.query(sql, [
+      isbn,
+      title,
+      publisher_id,
+      publication_year,
+      selling_price,
+      category,
+      stock_qty || 0,
+      threshold || 5,
+      cover_url || null,
+    ]);
+
+    res.json({ ok: true, message: 'Book added successfully' });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
 module.exports = router;

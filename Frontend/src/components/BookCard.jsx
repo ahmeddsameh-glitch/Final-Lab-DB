@@ -107,7 +107,7 @@ export default function BookCard({
               </div>
             )
           ) : (
-            // ADMIN ACTIONS
+            // ADMIN ACTIONS (Edit Button)
             <button
               className="bkBtnEdit"
               onClick={() => onEdit && onEdit(book)}
