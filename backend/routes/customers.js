@@ -22,6 +22,28 @@ async function getOrCreateCart(customerId) {
 }
 
 /**
+ * 0) Get customer profile
+ * GET /api/customers/:id
+ */
+router.get('/:id', verifyCustomer, async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+
+        const [[row]] = await pool.query(
+            `SELECT id, username, first_name, last_name, email, phone, shipping_address
+             FROM customers WHERE id=? LIMIT 1`,
+            [id]
+        );
+
+        if (!row) return res.status(404).json({ ok: false, error: 'Customer not found' });
+
+        res.json({ ok: true, profile: row });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+/**
  * 1) Update customer profile (NO password)
  * PUT /api/customers/:id
  */
@@ -336,7 +358,7 @@ router.post('/:id/checkout', verifyCustomer, async (req, res) => {
 });
 
 /**
- * 7) View past orders
+ * 7) View past orders (with items)
  * GET /api/customers/:id/orders
  */
 router.get('/:id/orders', verifyCustomer, async (req, res) => {
@@ -348,7 +370,27 @@ router.get('/:id/orders', verifyCustomer, async (req, res) => {
             [id]
         );
 
-        res.json({ ok: true, orders });
+        if (orders.length === 0) return res.json({ ok: true, orders: [] });
+
+        const orderIds = orders.map((o) => o.id);
+        const [items] = await pool.query(
+            `SELECT order_id, isbn, book_title, unit_price, qty
+             FROM order_items WHERE order_id IN (?)`,
+            [orderIds]
+        );
+
+        const itemsByOrder = items.reduce((acc, item) => {
+            acc[item.order_id] = acc[item.order_id] || [];
+            acc[item.order_id].push(item);
+            return acc;
+        }, {});
+
+        const enriched = orders.map((o) => ({
+            ...o,
+            items: itemsByOrder[o.id] || [],
+        }));
+
+        res.json({ ok: true, orders: enriched });
     } catch (err) {
         res.status(500).json({ ok: false, error: err.message });
     }

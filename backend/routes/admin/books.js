@@ -8,47 +8,79 @@ const router = express.Router();
  * Update book details
  */
 router.put("/:isbn", async (req, res) => {
+    const connection = await pool.getConnection();
     try {
         const { isbn } = req.params;
         const {
             title,
-            category_id,
+            category,
             publisher_id,
             publication_year,
             selling_price,
-            pages,
             stock_qty,
-            threshold_qty,
+            threshold,
             cover_url
         } = req.body;
 
-        if (!title || !category_id || !publisher_id || !publication_year || !selling_price) {
+        if (!title || !category || !publisher_id || !publication_year || !selling_price) {
             return res.status(400).json({ ok: false, error: "Missing required fields" });
         }
 
-        const [result] = await pool.query(
+        // Prevent negative stock
+        if (stock_qty !== undefined && stock_qty < 0) {
+            return res.status(400).json({ ok: false, error: "Stock quantity cannot be negative" });
+        }
+
+        await connection.beginTransaction();
+
+        // Get current stock to check threshold
+        const [[currentBook]] = await connection.query(
+            'SELECT stock_qty, threshold FROM books WHERE isbn = ? FOR UPDATE',
+            [isbn]
+        );
+
+        if (!currentBook) {
+            throw new Error('Book not found');
+        }
+
+        const [result] = await connection.query(
             `UPDATE books SET 
                 title = ?,
-                category_id = ?,
+                category = ?,
                 publisher_id = ?,
                 publication_year = ?,
                 selling_price = ?,
-                pages = ?,
                 stock_qty = ?,
-                threshold_qty = ?,
+                threshold = ?,
                 cover_url = ?
             WHERE isbn = ?`,
-            [title, category_id, publisher_id, publication_year, selling_price, pages, stock_qty, threshold_qty, cover_url, isbn]
+            [title, category, publisher_id, publication_year, selling_price, stock_qty ?? currentBook.stock_qty, threshold ?? currentBook.threshold, cover_url || null, isbn]
         );
 
         if (result.affectedRows === 0) {
-            return res.status(404).json({ ok: false, error: "Book not found" });
+            throw new Error('Failed to update book');
         }
 
+        // Check if auto-reorder needed (stock dropped below threshold)
+        const newStock = stock_qty ?? currentBook.stock_qty;
+        const newThreshold = threshold ?? currentBook.threshold;
+        
+        if (currentBook.stock_qty >= currentBook.threshold && newStock < newThreshold) {
+            await connection.query(
+                `INSERT INTO publisher_orders (isbn, publisher_id, order_qty, status)
+                VALUES (?, ?, ?, 'Pending')`,
+                [isbn, publisher_id, newThreshold * 3]
+            );
+        }
+
+        await connection.commit();
         res.json({ ok: true, message: "Book updated successfully" });
     } catch (error) {
+        await connection.rollback();
         console.error(error);
         res.status(500).json({ ok: false, error: error.message });
+    } finally {
+        connection.release();
     }
 });
 
@@ -61,50 +93,26 @@ router.post("/", async (req, res) => {
         const {
             isbn,
             title,
-            category_id,
+            category,
             publisher_id,
             publication_year,
             selling_price,
-            pages,
             stock_qty,
-            threshold_qty,
-            cover_url,
-            author_ids
+            threshold,
+            cover_url
         } = req.body;
 
-        if (!isbn || !title || !category_id || !publisher_id || !publication_year || !selling_price) {
+        if (!isbn || !title || !category || !publisher_id || !publication_year || !selling_price) {
             return res.status(400).json({ ok: false, error: "Missing required fields" });
         }
 
-        if (!author_ids || !Array.isArray(author_ids) || author_ids.length === 0) {
-            return res.status(400).json({ ok: false, error: "At least one author is required" });
-        }
+        await pool.query(
+            `INSERT INTO books (isbn, title, category, publisher_id, publication_year, selling_price, stock_qty, threshold, cover_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [isbn, title, category, publisher_id, publication_year, selling_price, stock_qty ?? 0, threshold ?? 5, cover_url || null]
+        );
 
-        const connection = await pool.getConnection();
-        try {
-            await connection.beginTransaction();
-
-            await connection.query(
-                `INSERT INTO books (isbn, title, category_id, publisher_id, publication_year, selling_price, pages, stock_qty, threshold_qty, cover_url)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [isbn, title, category_id, publisher_id, publication_year, selling_price, pages || 0, stock_qty || 0, threshold_qty || 5, cover_url || null]
-            );
-
-            for (const authorId of author_ids) {
-                await connection.query(
-                    "INSERT INTO book_authors (isbn, author_id) VALUES (?, ?)",
-                    [isbn, authorId]
-                );
-            }
-
-            await connection.commit();
-            res.json({ ok: true, message: "Book created successfully" });
-        } catch (error) {
-            await connection.rollback();
-            throw error;
-        } finally {
-            connection.release();
-        }
+        res.json({ ok: true, message: "Book created successfully" });
     } catch (error) {
         console.error(error);
         if (error.code === "ER_DUP_ENTRY") {

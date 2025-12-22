@@ -17,6 +17,7 @@ export default function CustomerBooksPage({ user }) {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // cart map: { [isbn]: qty }
   const [cartQty, setCartQty] = useState({});
@@ -37,13 +38,20 @@ export default function CustomerBooksPage({ user }) {
     setLoading(true);
     setError('');
     try {
-      const url = new URL(`${API_BASE}/api/books`);
-      if (cat !== 'all') url.searchParams.set('category', cat);
-      url.searchParams.set('limit', '50');
+      const body = { limit: 50 };
+      if (cat !== 'all') body.category = cat;
+      if (searchQuery.trim()) body.q = searchQuery.trim();
 
-      const res = await fetch(url.toString(), { signal });
+      const res = await fetch(`${API_BASE}/api/books`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal,
+      });
+
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
       const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.error || 'Failed to load');
+      if (!data.ok) throw new Error(data.error || 'Failed to load');
 
       setBooks(Array.isArray(data.data) ? data.data : []);
     } catch (e) {
@@ -58,7 +66,9 @@ export default function CustomerBooksPage({ user }) {
     if (!customerId) return;
 
     try {
-      const res = await fetch(`${API_BASE}/api/customers/${customerId}/cart`);
+      const res = await fetch(`${API_BASE}/api/customers/${customerId}/cart`, {
+        credentials: 'include',
+      });
       const data = await res.json();
       if (data.ok && Array.isArray(data.items)) {
         const map = {};
@@ -81,6 +91,7 @@ export default function CustomerBooksPage({ user }) {
       await fetch(`${API_BASE}/api/customers/${customerId}/cart`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ isbn, qty: 1 }),
       });
     } catch (e) {
@@ -102,6 +113,7 @@ export default function CustomerBooksPage({ user }) {
       await fetch(`${API_BASE}/api/customers/${customerId}/cart/${isbn}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ qty }),
       });
     } catch (e) {

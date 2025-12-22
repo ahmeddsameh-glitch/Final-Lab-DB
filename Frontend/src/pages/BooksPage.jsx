@@ -59,11 +59,18 @@ export default function BooksPage() {
     setLoading(true);
     setError('');
     try {
-      const url = new URL(`${API_BASE}/api/books`);
-      if (cat !== 'all') url.searchParams.set('category', cat);
-      url.searchParams.set('limit', '50');
+      const body = {
+        limit: 50
+      };
+      if (cat !== 'all') body.category = cat;
 
-      const res = await fetch(url.toString(), { signal });
+      const res = await fetch(`${API_BASE}/api/books`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal
+      });
+      
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
       const data = await res.json();
 
