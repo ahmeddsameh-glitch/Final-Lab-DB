@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import OrdersPage from './pages/OrdersPage.jsx';
+
 // Layouts
 import AdminLayout from './layouts/AdminLayout.jsx';
 import CustomerLayout from './layouts/CustomerLayout.jsx';
@@ -10,6 +11,10 @@ import LoginPage from './pages/LoginPage.jsx';
 import BooksPage from './pages/BooksPage.jsx'; // Admin Books
 import CustomerBooksPage from './pages/CustomerBooksPage.jsx'; // Customer Books
 import ReportsPage from './pages/ReportsPage.jsx';
+
+// Customer Pages
+import MyOrders from './pages/MyOrders.jsx';
+import CustomerInfo from './pages/CustomerInfo.jsx';
 
 // Components
 function Placeholder({ title }) {
@@ -102,7 +107,6 @@ export default function App() {
           path="customers"
           element={<Placeholder title="Customers Management" />}
         />
-        <Route path="orders" element={<Placeholder title="Admin Orders" />} />
       </Route>
 
       {/* --------------------- */}
@@ -121,8 +125,14 @@ export default function App() {
         <Route index element={<Navigate to="books" replace />} />
         <Route path="books" element={<CustomerBooksPage user={user} />} />
         <Route path="cart" element={<Placeholder title="My Cart" />} />
-        <Route path="orders" element={<Placeholder title="My Orders" />} />
-        <Route path="settings" element={<Placeholder title="Settings" />} />
+        
+        {/* ✅ CUSTOMER ORDER HISTORY PAGE */}
+        <Route path="orders" element={<MyOrders user={user} />} />
+        
+        {/* ✅ CUSTOMER PROFILE/INFO PAGE */}
+        <Route path="profile" element={<CustomerInfo user={user} />} />
+        
+        <Route path="profile" element={<Placeholder title="profile" />} />
       </Route>
 
       {/* --------------------- */}

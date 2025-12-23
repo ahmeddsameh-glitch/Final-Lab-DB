@@ -6,7 +6,7 @@ const navItems = [
   { to: '/c/books', label: 'Books', icon: Library },
   { to: '/c/cart', label: 'Cart', icon: ShoppingCart },
   { to: '/c/orders', label: 'My Orders', icon: Receipt },
-  { to: '/c/settings', label: 'Settings', icon: Settings },
+  { to: '/c/profile', label: 'Settings', icon: Settings },
 ];
 
 export default function CustomerSidebar({ onLogout }) {
