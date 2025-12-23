@@ -11,12 +11,9 @@ import LoginPage from './pages/LoginPage.jsx';
 import BooksPage from './pages/BooksPage.jsx'; // Admin Books
 import CustomerBooksPage from './pages/CustomerBooksPage.jsx'; // Customer Books
 import ReportsPage from './pages/ReportsPage.jsx';
+import MySettingsPage from './pages/MySettingsPage.jsx';
 
-// Customer Pages
-import MyOrders from './pages/MyOrders.jsx';
-import CustomerInfo from './pages/CustomerInfo.jsx';
 
-// Components
 function Placeholder({ title }) {
   return (
     <div style={{ padding: 24 }}>
@@ -77,7 +74,6 @@ export default function App() {
           !user ? (
             <LoginPage onLogin={(u) => setUser(u)} />
           ) : (
-            // Redirect logged-in users to their correct home
             <Navigate
               to={user.role === 'admin' ? '/admin/books' : '/c/books'}
               replace
@@ -113,21 +109,24 @@ export default function App() {
       {/* CUSTOMER ROUTES (/c)  */}
       {/* --------------------- */}
       <Route
-  path="/c"
-  element={
-    user && user.role === 'customer' ? (
-      <CustomerLayout onLogout={handleLogout} user={user} /> 
-    ) : (
-      <Navigate to="/auth" replace />
-    )
-  }
->
-  <Route index element={<Navigate to="books" replace />} />
-  <Route path="books" element={<CustomerBooksPage />} /> {/* Remove user prop */}
-  <Route path="cart" element={<Placeholder title="My Cart" />} />
-  <Route path="orders" element={<MyOrders />} /> {/* Remove user prop */}
-  <Route path="profile" element={<CustomerInfo />} /> {/* Remove user prop */}
-</Route>
+
+
+        path="/c"
+        element={
+          user && user.role === 'customer' ? (
+            <CustomerLayout user={user} onLogout={handleLogout} />
+          ) : (
+            <Navigate to="/auth" replace />
+          )
+        }
+      >
+        <Route index element={<Navigate to="books" replace />} />
+        <Route path="books" element={<CustomerBooksPage user={user} />} />
+        <Route path="cart" element={<Placeholder title="My Cart" />} />
+        <Route path="orders" element={<Placeholder title="My Orders" />} />
+        <Route path="settings" element={<MySettingsPage user={user} />} />
+      </Route>
+
 
       {/* --------------------- */}
       {/* FALLBACK */}
