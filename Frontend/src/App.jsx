@@ -10,6 +10,7 @@ import LoginPage from './pages/LoginPage.jsx';
 import BooksPage from './pages/BooksPage.jsx'; // Admin Books
 import CustomerBooksPage from './pages/CustomerBooksPage.jsx'; // Customer Books
 import ReportsPage from './pages/ReportsPage.jsx';
+import CartPage from './pages/CartPage.jsx';
 
 // Components
 function Placeholder({ title }) {
@@ -120,7 +121,7 @@ export default function App() {
       >
         <Route index element={<Navigate to="books" replace />} />
         <Route path="books" element={<CustomerBooksPage user={user} />} />
-        <Route path="cart" element={<Placeholder title="My Cart" />} />
+        <Route path="cart" element={<CartPage user={user} />} />
         <Route path="orders" element={<Placeholder title="My Orders" />} />
         <Route path="settings" element={<Placeholder title="Settings" />} />
       </Route>
