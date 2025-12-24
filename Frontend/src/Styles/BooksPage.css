@@ -1,4 +1,4 @@
-.bkPage {
+  .bkPage {
   padding: 20px;
   width: 100%;
   max-width: 100%;
@@ -32,6 +32,139 @@
   margin: 16px 0 12px;
 }
 
+/* Quick category pills (customer top bar) */
+.bkQuickCats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bkQuickCatBtn {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.9);
+  color: #0f172a;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+
+.bkQuickCatBtn:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(79, 70, 229, 0.18);
+}
+
+.bkQuickCatBtn.active {
+  background: #eef2ff;
+  color: #4338ca;
+  border-color: #c7d2fe;
+}
+
+/* Admin Filters Bar */
+.bkFiltersBar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+}
+
+.bkFilterInput {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.bkFilterInput:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.bkFilterSelect {
+  position: relative;
+  min-width: 200px;
+}
+
+.bkFilterSelectBtn {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 14px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.bkFilterSelectBtn:hover {
+  border-color: #d1d5db;
+}
+
+.bkFilterSelectBtn:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.bkFilterSelect .caret {
+  font-size: 12px;
+  color: #6b7280;
+  transition: transform 0.15s;
+}
+
+.bkFilterSelect .caret.open {
+  transform: rotate(180deg);
+}
+
+.bkFilterSelectList {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+  padding: 6px;
+  z-index: 20;
+}
+
+.bkFilterSelectItem {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
+  transition: background 0.12s, color 0.12s;
+}
+
+.bkFilterSelectItem:hover {
+  background: #f3f4f6;
+}
+
+.bkFilterSelectItem.active {
+  background: #eef2ff;
+  color: #4f46e5;
+  font-weight: 600;
+}
+
 .bkGridTitle {
   font-weight: 900;
   font-size: 16px;
@@ -47,6 +180,126 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 14px;
+}
+
+/* List View */
+.bkGrid.bkList {
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+.bkGrid.bkList .bkCard {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  padding: 8px 12px !important;
+  gap: 12px !important;
+  border-radius: 10px !important;
+}
+
+.bkGrid.bkList .bkCard:hover {
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06) !important;
+}
+
+.bkGrid.bkList .bkCoverWrap {
+  width: 50px !important;
+  height: 70px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+/* Inline list-mode actions: hidden until hover, then show */
+.bkGrid.bkList .bkInlineActs { display: none; align-items: center; gap: 8px; }
+.bkCard:hover .bkInlineActs { display: flex; }
+
+.bkGrid.bkList .bkCover {
+  width: 50px !important;
+  height: 70px !important;
+  border-radius: 5px !important;
+  object-fit: cover !important;
+}
+
+.bkGrid.bkList .bkMeta {
+  flex: 1 !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 1px !important;
+}
+
+.bkGrid.bkList .bkTitle {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  margin: 0 0 2px 0 !important;
+  min-height: auto !important;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  -webkit-line-clamp: 1 !important;
+  line-clamp: 1 !important;
+  line-height: 1.2 !important;
+}
+
+.bkGrid.bkList .bkAuthor {
+  font-size: 11px !important;
+  margin: 0 0 3px 0 !important;
+  opacity: 0.65 !important;
+}
+
+.bkGrid.bkList .bkBottom {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin: 0 !important;
+}
+
+.bkGrid.bkList .bkPrice {
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  margin: 0 !important;
+}
+
+.bkGrid.bkList .bkStock,
+.bkGrid.bkList .bkRating {
+  display: none !important;
+}
+
+.bkGrid.bkList .bkActions {
+  margin: 0 0 0 auto !important;
+  flex-shrink: 0 !important;
+  height: auto !important;
+}
+
+.bkGrid.bkList .bkBtnAdd {
+  height: 34px !important;
+  font-size: 0.8rem !important;
+  padding: 0 14px !important;
+}
+
+.bkGrid.bkList .bkWishBtn {
+  display: none !important;
+  flex-shrink: 0 !important;
+  height: auto !important;
+}
+
+.bkGrid.bkList .bkWishBtn {
+  display: none !important;
+}
+
+@media (max-width: 600px) {
+  .bkGrid.bkList .bookCard {
+    flex-wrap: wrap;
+  }
+  
+  .bkGrid.bkList .bkActions {
+    width: 100%;
+    margin-left: 0 !important;
+    margin-top: 8px !important;
+  }
 }
 
 .bkCard {
@@ -67,6 +320,23 @@
   padding: 12px;
   display: grid;
   place-items: center;
+  position: relative; /* keep wishlist/review buttons anchored to the cover */
+}
+
+/* Hide wishlist/review buttons until hover */
+.bkWishlistBtn,
+.bkReviewBtn {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  transform: translateY(-2px);
+}
+
+.bkCard:hover .bkWishlistBtn,
+.bkCard:hover .bkReviewBtn {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .bkCover {
@@ -89,7 +359,7 @@
   color: var(--text);
 
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   min-height: 32px;
@@ -428,3 +698,5 @@
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+/* Review button styles now inline in BookCard component */

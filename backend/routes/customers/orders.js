@@ -136,4 +136,66 @@ router.get('/:id/orders', verifyCustomer, ensureSameCustomer, async (req, res) =
     }
 });
 
+// 8) Reorder - add all items from a past order to current cart
+router.post('/:id/orders/:orderId/reorder', verifyCustomer, ensureSameCustomer, async (req, res) => {
+    try {
+        const customerId = Number(req.params.id);
+        const orderId = Number(req.params.orderId);
+
+        // Get all items from the past order
+        const [orderItems] = await pool.query(
+            `SELECT isbn, qty FROM order_items WHERE order_id = ?`,
+            [orderId]
+        );
+
+        if (orderItems.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Order not found or has no items' });
+        }
+
+        // Get or create cart for customer
+        const [[cart]] = await pool.query(
+            'SELECT id FROM carts WHERE customer_id = ?',
+            [customerId]
+        );
+        if (!cart) {
+            const [result] = await pool.query(
+                'INSERT INTO carts (customer_id) VALUES (?)',
+                [customerId]
+            );
+            cartId = result.insertId;
+        } else {
+            cartId = cart.id;
+        }
+
+        // Add each item to cart (increment if already exists)
+        for (const item of orderItems) {
+            // Check stock availability
+            const [[book]] = await pool.query(
+                'SELECT stock_qty FROM books WHERE isbn = ?',
+                [item.isbn]
+            );
+
+            if (!book || book.stock_qty === 0) {
+                return res.status(400).json({
+                    ok: false,
+                    error: `One or more items are out of stock`,
+                });
+            }
+
+            // Add to cart with limit of available stock
+            const qtyToAdd = Math.min(item.qty, book.stock_qty);
+            await pool.query(
+                `INSERT INTO cart_items (cart_id, isbn, qty)
+                VALUES (?, ?, ?)
+                ON DUPLICATE KEY UPDATE qty = qty + VALUES(qty)`,
+                [cartId, item.isbn, qtyToAdd]
+            );
+        }
+
+        res.json({ ok: true, message: `Added ${orderItems.length} items to cart` });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
 module.exports = router;

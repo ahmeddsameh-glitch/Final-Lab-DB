@@ -14,6 +14,7 @@ import ReportsPage from './pages/ReportsPage.jsx';
 import MySettingsPage from './pages/MySettingsPage.jsx';
 import CartPage from './pages/CartPage.jsx';
 import MyOrders from './pages/MyOrders.jsx';
+import WishlistPage from './pages/WishlistPage.jsx';
 
 
 
@@ -43,6 +44,7 @@ export default function App() {
         if (data.ok) setUser(data.user);
         else setUser(null);
       } catch (err) {
+        console.error('Failed to check session:', err);
         setUser(null);
       } finally {
         setLoading(false);
@@ -112,8 +114,6 @@ export default function App() {
       {/* CUSTOMER ROUTES (/c)  */}
       {/* --------------------- */}
       <Route
-
-
         path="/c"
         element={
           user && user.role === 'customer' ? (
@@ -126,6 +126,7 @@ export default function App() {
         <Route index element={<Navigate to="books" replace />} />
         <Route path="books" element={<CustomerBooksPage user={user} />} />
         <Route path="cart" element={<CartPage user={user} />} />
+        <Route path="wishlist" element={<WishlistPage user={user} />} />
         <Route path="orders" element={<MyOrders user={user} />} />
         <Route path="settings" element={<MySettingsPage user={user} />} />
       </Route>

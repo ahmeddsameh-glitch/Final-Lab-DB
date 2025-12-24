@@ -5,10 +5,12 @@ const router = express.Router();
 const profileRouter = require('./profile');
 const cartRouter = require('./cart');
 const ordersRouter = require('./orders');
+const wishlistRouter = require('./wishlist');
 
 // Mount each router directly (routes already include :id params)
 router.use('/', profileRouter);
 router.use('/', cartRouter);
 router.use('/', ordersRouter);
+router.use('/', wishlistRouter);
 
 module.exports = router;
