@@ -47,11 +47,14 @@ router.post('/', async (req, res) => {
                 b.threshold,
                 b.cover_url,
                 b.created_at,
-                p.name as publisher_name
+                p.name as publisher_name,
+                COALESCE(AVG(r.rating), 0) as avg_rating,
+                COUNT(DISTINCT r.id) as review_count
             FROM books b
             LEFT JOIN book_authors ba ON b.isbn = ba.isbn
             LEFT JOIN authors a ON ba.author_id = a.id
             LEFT JOIN publishers p ON b.publisher_id = p.id
+            LEFT JOIN reviews r ON b.isbn = r.isbn
             WHERE 1=1
         `;
         const params = [];
@@ -89,6 +92,11 @@ router.post('/', async (req, res) => {
             sql += ` AND b.selling_price <= ?`;
             params.push(price_max);
         }
+
+        // GROUP BY for aggregated rating fields
+        sql += ` GROUP BY b.isbn, b.title, b.publisher_id, b.publication_year, 
+                b.selling_price, b.category, b.stock_qty, b.threshold, 
+                b.cover_url, b.created_at, p.name`;
 
         // Add ORDER BY based on sort_by parameter
         if (sort_by === 'price') {
@@ -162,6 +170,108 @@ router.get('/:isbn', async (req, res) => {
             ok: false,
             error: error.message,
         });
+    }
+});
+
+/**
+ * GET reviews for a book
+ * GET /api/books/:isbn/reviews
+ * Returns all reviews for a specific book with customer info
+ */
+router.get('/:isbn/reviews', async (req, res) => {
+    try {
+        const { isbn } = req.params;
+
+        const [reviews] = await pool.query(
+            `SELECT 
+                r.id,
+                r.rating,
+                r.review_text,
+                r.created_at,
+                c.name as customer_name
+            FROM reviews r
+            JOIN customers c ON r.customer_id = c.id
+            WHERE r.isbn = ?
+            ORDER BY r.created_at DESC`,
+            [isbn]
+        );
+
+        res.json({
+            ok: true,
+            count: reviews.length,
+            reviews
+        });
+    } catch (error) {
+        res.status(500).json({ ok: false, error: error.message });
+    }
+});
+
+/**
+ * POST a review for a book
+ * POST /api/books/:isbn/reviews
+ * Body: { customer_id, rating, review_text }
+ * Requires customer to be authenticated
+ */
+router.post('/:isbn/reviews', async (req, res) => {
+    try {
+        const { isbn } = req.params;
+        const { customer_id, rating, review_text } = req.body;
+
+        // Validate inputs
+        if (!customer_id || !rating) {
+            return res.status(400).json({
+                ok: false,
+                error: 'customer_id and rating are required'
+            });
+        }
+
+        if (rating < 1 || rating > 5) {
+            return res.status(400).json({
+                ok: false,
+                error: 'rating must be between 1 and 5'
+            });
+        }
+
+        // Check if book exists
+        const [books] = await pool.query('SELECT isbn FROM books WHERE isbn = ?', [isbn]);
+        if (books.length === 0) {
+            return res.status(404).json({ ok: false, error: 'Book not found' });
+        }
+
+        // Enforce verified purchase: customer must have bought this ISBN
+        const [purchases] = await pool.query(
+            `SELECT 1
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.id
+            WHERE o.customer_id = ? AND oi.isbn = ?
+            LIMIT 1`,
+            [customer_id, isbn]
+        );
+
+        if (purchases.length === 0) {
+            return res.status(403).json({
+                ok: false,
+                error: 'Only customers who purchased this book can leave a review'
+            });
+        }
+
+        // Insert or update review
+        await pool.query(
+            `INSERT INTO reviews (isbn, customer_id, rating, review_text)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                rating = VALUES(rating),
+                review_text = VALUES(review_text),
+                created_at = CURRENT_TIMESTAMP`,
+            [isbn, customer_id, rating, review_text || null]
+        );
+
+        res.json({
+            ok: true,
+            message: 'Review submitted successfully'
+        });
+    } catch (error) {
+        res.status(500).json({ ok: false, error: error.message });
     }
 });
 

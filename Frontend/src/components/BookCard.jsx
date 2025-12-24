@@ -1,4 +1,4 @@
-import { Star, ShoppingBag, Minus, Plus, Pencil, Heart } from 'lucide-react';
+import { Star, ShoppingBag, Minus, Plus, Pencil, Heart, MessageSquarePlus } from 'lucide-react';
 import '../Styles/BooksPage.css';
 
 export default function BookCard({
@@ -9,12 +9,14 @@ export default function BookCard({
   onEdit,
   isInWishlist = false,
   onToggleWishlist,
+  onReview,
 }) {
   const isCustomer = typeof onAddOne === 'function';
   const coverSrc =
     book.cover_url || 'https://via.placeholder.com/300x420?text=No+Cover';
   const price = Number(book.selling_price || 0).toFixed(2);
-  const rating = 4.5;
+  const avgRating = Number(book.avg_rating || 0);
+  const reviewCount = Number(book.review_count || 0);
 
   // Stock Logic
   const inStock = book.stock_qty > 0;
@@ -32,7 +34,39 @@ export default function BookCard({
         {/* Admin Low Stock Badge */}
         {isLowStock && <div className="bkBadge error">Low Stock</div>}
         
-        {/* Customer Wishlist Heart */}
+        {/* Customer Review Button - Left side */}
+        {isCustomer && onReview && (
+          <button
+            className="bkReviewBtn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onReview();
+            }}
+            aria-label="Write a review"
+            title="Write a review"
+            style={{
+              position: 'absolute',
+              top: '8px',
+              left: '8px',
+              background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+              border: 'none',
+              borderRadius: '50%',
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              boxShadow: '0 2px 8px rgba(79, 70, 229, 0.35)',
+              color: 'white',
+            }}
+          >
+            <MessageSquarePlus size={18} />
+          </button>
+        )}
+        
+        {/* Customer Wishlist Heart - Right side */}
         {isCustomer && onToggleWishlist && (
           <button
             className="bkWishlistBtn"
@@ -102,10 +136,19 @@ export default function BookCard({
 
         <div className="bkBottom">
           <div className="bkPrice">${price}</div>
-          <div className="bkRating">
-            <Star size={14} fill="#fbbf24" stroke="none" />
-            <span>{rating}</span>
-          </div>
+          {reviewCount > 0 ? (
+            <div className="bkRating">
+              <Star size={14} fill="#fbbf24" stroke="none" />
+              <span>{avgRating.toFixed(1)}</span>
+              <span style={{ fontSize: '12px', color: '#888', marginLeft: '4px' }}>
+                ({reviewCount})
+              </span>
+            </div>
+          ) : (
+            <div className="bkRating" style={{ color: '#999', fontSize: '13px' }}>
+              No reviews
+            </div>
+          )}
         </div>
 
         {/* --- ACTIONS --- */}

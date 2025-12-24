@@ -3,6 +3,8 @@ import CategoryPicker from '../components/CategoryPicker.jsx';
 import SearchOverlay from '../components/SearchOverlay.jsx';
 import ViewToggle from '../components/ViewToggle.jsx';
 import BookCard from '../components/BookCard.jsx';
+import ReviewModal from '../components/ReviewModal.jsx';
+import { MessageSquarePlus } from 'lucide-react';
 import '../Styles/BooksPage.css';
 import '../Styles/FilterPanel.css';
 import {useOutletContext} from 'react-router-dom';
@@ -31,6 +33,9 @@ export default function CustomerBooksPage() {
   
   // wishlist set: { isbn: true }
   const [wishlistSet, setWishlistSet] = useState({});
+  
+  // review modal
+  const [reviewingBook, setReviewingBook] = useState(null);
 
   const categories = useMemo(
     () => [
@@ -316,10 +321,23 @@ export default function CustomerBooksPage() {
             onSetQty={(qty) => setQty(b.isbn, qty)}
             isInWishlist={wishlistSet[b.isbn] || false}
             onToggleWishlist={() => toggleWishlist(b.isbn)}
+            onReview={() => setReviewingBook(b)}
             viewMode={view}
           />
         ))}
       </div>
+
+      {reviewingBook && (
+        <ReviewModal
+          book={reviewingBook}
+          user={user}
+          onClose={() => setReviewingBook(null)}
+          onSubmitted={() => {
+            // Refresh books to update ratings
+            loadBooks();
+          }}
+        />
+      )}
     </div>
   );
 }
