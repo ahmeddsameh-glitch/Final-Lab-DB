@@ -4,6 +4,7 @@ import SearchOverlay from '../components/SearchOverlay.jsx';
 import ViewToggle from '../components/ViewToggle.jsx';
 import BookCard from '../components/BookCard.jsx';
 import '../Styles/BooksPage.css';
+import '../Styles/FilterPanel.css';
 import {useOutletContext} from 'react-router-dom';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000';
@@ -19,6 +20,11 @@ export default function CustomerBooksPage() {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Filter states
+  const [priceMin, setPriceMin] = useState(0);
+  const [priceMax, setPriceMax] = useState(5000);
+  const [sortBy, setSortBy] = useState('newest');
 
   // cart map: { [isbn]: qty }
   const [cartQty, setCartQty] = useState({});
@@ -39,10 +45,15 @@ export default function CustomerBooksPage() {
   );
 
   const loadBooks = useCallback(async (signal) => {
-    setLoading(true);
+    setLoading(true);9582
     setError('');
     try {
-      const body = { limit: 50 };
+      const body = { 
+        limit: 50,
+        price_min: priceMin,
+        price_max: priceMax,
+        sort_by: sortBy,
+      };
       if (cat !== 'all') body.category = cat;
 
       const res = await fetch(`${API_BASE}/api/books`, {
@@ -62,7 +73,7 @@ export default function CustomerBooksPage() {
     } finally {
       setLoading(false);
     }
-  }, [cat]);
+  }, [cat, priceMin, priceMax, sortBy]);
 
   const loadCart = useCallback(async () => {
     // 3. Safety check using the prop
@@ -203,6 +214,13 @@ export default function CustomerBooksPage() {
     if (matchCat) setCat(matchCat.id);
   };
 
+  const handleFilterReset = () => {
+    setPriceMin(0);
+    setPriceMax(5000);
+    setSortBy('newest');
+    setCat('all');
+  };
+
   return (
     <div className="bkPage">
       <div className="bkTopRow">
@@ -229,6 +247,54 @@ export default function CustomerBooksPage() {
         />
       </div>
 
+      {/* Compact Filter Bar */}
+      <div className="filter-bar">
+        <div className="filter-group">
+          <label className="filter-label">Sort By</label>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="filter-select"
+          >
+            <option value="newest">Newest First</option>
+            <option value="price">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+            <option value="title">Title: A to Z</option>
+            <option value="year">Year: Newest</option>
+          </select>
+        </div>
+
+        <div className="price-range">
+          <div className="filter-group">
+            <label className="filter-label">Min Price</label>
+            <input
+              type="number"
+              min="0"
+              value={priceMin}
+              onChange={(e) => setPriceMin(Number(e.target.value))}
+              className="filter-input"
+              placeholder="0"
+            />
+          </div>
+          <div className="price-divider">—</div>
+          <div className="filter-group">
+            <label className="filter-label">Max Price</label>
+            <input
+              type="number"
+              min="0"
+              value={priceMax}
+              onChange={(e) => setPriceMax(Number(e.target.value))}
+              className="filter-input"
+              placeholder="5000"
+            />
+          </div>
+        </div>
+
+        <button onClick={handleFilterReset} className="filter-reset-btn">
+          Reset Filters
+        </button>
+      </div>
+
       <div className="bkGridHead">
         <div className="bkGridTitle">Browse books</div>
         <div className="bkGridHint">
@@ -240,7 +306,7 @@ export default function CustomerBooksPage() {
         </div>
       </div>
 
-      <div className="bkGrid">
+      <div className={`bkGrid ${view === 'list' ? 'bkList' : ''}`}>
         {books.map((b) => (
           <BookCard
             key={b.isbn}
@@ -250,6 +316,7 @@ export default function CustomerBooksPage() {
             onSetQty={(qty) => setQty(b.isbn, qty)}
             isInWishlist={wishlistSet[b.isbn] || false}
             onToggleWishlist={() => toggleWishlist(b.isbn)}
+            viewMode={view}
           />
         ))}
       </div>

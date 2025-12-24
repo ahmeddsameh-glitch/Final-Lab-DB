@@ -6,11 +6,12 @@ const router = express.Router();
 /**
  * POST search/list books with filters
  * POST /api/books
- * Body: { q, category, author, publisher, limit, offset }
+ * Body: { q, category, author, publisher, limit, offset, price_min, price_max, sort_by }
  * 
  * a) Search by ISBN, Title, or Author name (via q parameter)
- * b) Filter by Category, Author, or Publisher
- * c) Returns book details and availability status
+ * b) Filter by Category, Author, Publisher, Price Range
+ * c) Sort by price, title, or publication_year
+ * d) Returns book details and availability status
  */
 router.post('/', async (req, res) => {
     try {
@@ -19,6 +20,13 @@ router.post('/', async (req, res) => {
         const category = String(req.body.category || '').trim(); // category filter
         const author = String(req.body.author || '').trim(); // author filter
         const publisher = String(req.body.publisher || '').trim(); // publisher filter
+        
+        // Price range filters
+        const price_min = Number(req.body.price_min) || 0;
+        const price_max = Number(req.body.price_max) || Number.MAX_VALUE;
+        
+        // Sorting options: 'price', 'title', 'year', 'newest' (default)
+        const sort_by = String(req.body.sort_by || 'newest').trim().toLowerCase();
 
         // pagination (safe defaults)
         const limit = Math.min(Number(req.body.limit || 20), 100);
@@ -71,8 +79,32 @@ router.post('/', async (req, res) => {
             sql += ` AND p.name = ?`;
             params.push(publisher);
         }
+        
+        // Filter by price range
+        if (price_min > 0) {
+            sql += ` AND b.selling_price >= ?`;
+            params.push(price_min);
+        }
+        if (price_max < Number.MAX_VALUE) {
+            sql += ` AND b.selling_price <= ?`;
+            params.push(price_max);
+        }
 
-        sql += ` ORDER BY b.created_at DESC, b.isbn DESC LIMIT ? OFFSET ?`;
+        // Add ORDER BY based on sort_by parameter
+        if (sort_by === 'price') {
+            sql += ` ORDER BY b.selling_price ASC, b.isbn DESC`;
+        } else if (sort_by === 'price_desc') {
+            sql += ` ORDER BY b.selling_price DESC, b.isbn DESC`;
+        } else if (sort_by === 'title') {
+            sql += ` ORDER BY b.title ASC, b.isbn DESC`;
+        } else if (sort_by === 'year') {
+            sql += ` ORDER BY b.publication_year DESC, b.isbn DESC`;
+        } else {
+            // default: newest first
+            sql += ` ORDER BY b.created_at DESC, b.isbn DESC`;
+        }
+        
+        sql += ` LIMIT ? OFFSET ?`;
         params.push(limit, offset);
 
         // ---- 3) Run query ----
