@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../Styles/SearchOverlay.css';
 import { Search, X, Sparkles, ArrowRight, MapPin, Gift, ShoppingCart, Package, User, BookOpen } from 'lucide-react';
@@ -69,22 +69,6 @@ export default function SearchOverlay({
         return;
       }
       if (open && e.key === 'Escape') close();
-
-      // Arrow key navigation when panel is open
-      if (open) {
-        const allItems = [...filteredTrending, ...filteredNewIn, ...quick.map(q => q.label)];
-        
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          setSelectedIndex(prev => (prev + 1) % allItems.length);
-        } else if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          setSelectedIndex(prev => prev <= 0 ? allItems.length - 1 : prev - 1);
-        } else if (e.key === 'Enter' && selectedIndex >= 0) {
-          e.preventDefault();
-          handleSelect(allItems[selectedIndex]);
-        }
-      }
     };
 
     const onMouseDown = (e) => {
@@ -98,13 +82,6 @@ export default function SearchOverlay({
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('mousedown', onMouseDown);
     };
-  }, [open, selectedIndex]);
-
-  useEffect(() => {
-    if (!open) {
-      setQ('');
-      setSelectedIndex(-1);
-    }
   }, [open]);
 
   const filteredTrending = useMemo(() => {
@@ -119,7 +96,18 @@ export default function SearchOverlay({
     return newIn.filter((t) => t.toLowerCase().includes(s));
   }, [q, newIn]);
 
-  const handleSelect = (value) => {
+  // Reset search state when panel closes
+  useEffect(() => {
+    if (open) return;
+    // Use setTimeout to avoid state update during render
+    const timer = setTimeout(() => {
+      setQ('');
+      setSelectedIndex(-1);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [open]);
+
+  const handleSelect = useCallback((value) => {
     // Check if it's a quick action with a path
     const quickAction = quick.find(qa => qa.label === value);
     
@@ -158,11 +146,34 @@ export default function SearchOverlay({
     // Fallback to onPick callback
     onPick?.(value);
     close();
-  };
+  }, [navigate, quick, onPick]);
 
   const pick = (value) => {
     handleSelect(value);
   };
+
+  // Arrow key navigation when panel is open
+  useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (e) => {
+      const allItems = [...filteredTrending, ...filteredNewIn, ...quick.map(q => q.label)];
+      
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex(prev => (prev + 1) % allItems.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex(prev => prev <= 0 ? allItems.length - 1 : prev - 1);
+      } else if (e.key === 'Enter' && selectedIndex >= 0) {
+        e.preventDefault();
+        handleSelect(allItems[selectedIndex]);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, selectedIndex, filteredTrending, filteredNewIn, quick, handleSelect]);
 
   return (
     <div className="searchWrap">
@@ -265,7 +276,7 @@ export default function SearchOverlay({
           <div className="searchCol">
             <div className="searchTitle">Quick actions</div>
             <div className="searchCards">
-              {quick.map(({ icon: Icon, label, path }, idx) => {
+              {quick.map(({ icon: Icon, label }, idx) => {
                 const globalIdx = filteredTrending.length + filteredNewIn.length + idx;
                 return (
                   <button

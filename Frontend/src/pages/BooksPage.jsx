@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Save, Plus } from 'lucide-react';
 
@@ -55,7 +55,7 @@ export default function BooksPage() {
   ];
 
   // --- DATA FETCHING ---
-  const loadBooks = async (signal) => {
+  const loadBooks = useCallback(async (signal) => {
     setLoading(true);
     setError('');
     try {
@@ -81,13 +81,13 @@ export default function BooksPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [cat]);
 
   useEffect(() => {
     const controller = new AbortController();
     loadBooks(controller.signal);
     return () => controller.abort();
-  }, [cat]);
+  }, [cat, loadBooks]);
 
   // --- HANDLERS ---
   const handlePick = (value) => {
@@ -127,6 +127,7 @@ export default function BooksPage() {
         alert(data.error);
       }
     } catch (err) {
+      console.error('Failed to update book', err);
       alert('Failed to update book');
     }
   };
@@ -161,6 +162,7 @@ export default function BooksPage() {
         alert(data.error);
       }
     } catch (err) {
+      console.error('Failed to add book', err);
       alert('Failed to add book');
     }
   };

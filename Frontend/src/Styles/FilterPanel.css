@@ -86,9 +86,9 @@ INPUTS & SELECTS
 /* CLEAN CUSTOM SELECT */
 
 .filter-select {
-    appearance: none;
-    -webkit-appearance: none;
     -moz-appearance: none;
+    -webkit-appearance: none;
+    appearance: none;
 
     height: 34px;
     padding: 0 34px 0 12px;

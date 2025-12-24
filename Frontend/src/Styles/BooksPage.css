@@ -99,7 +99,11 @@
   font-weight: 700 !important;
   margin: 0 0 2px 0 !important;
   min-height: auto !important;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
   -webkit-line-clamp: 1 !important;
+  line-clamp: 1 !important;
   line-height: 1.2 !important;
 }
 
@@ -141,7 +145,6 @@
 
 .bkGrid.bkList .bkWishBtn {
   display: none !important;
-}
   flex-shrink: 0 !important;
   height: auto !important;
 }
