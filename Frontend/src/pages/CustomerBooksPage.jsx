@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import CategoryPicker from '../components/CategoryPicker.jsx';
 import SearchOverlay from '../components/SearchOverlay.jsx';
 import ViewToggle from '../components/ViewToggle.jsx';
@@ -19,10 +19,12 @@ export default function CustomerBooksPage() {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
 
   // cart map: { [isbn]: qty }
   const [cartQty, setCartQty] = useState({});
+  
+  // wishlist set: { isbn: true }
+  const [wishlistSet, setWishlistSet] = useState({});
 
   const categories = useMemo(
     () => [
@@ -36,13 +38,12 @@ export default function CustomerBooksPage() {
     []
   );
 
-  async function loadBooks(signal) {
+  const loadBooks = useCallback(async (signal) => {
     setLoading(true);
     setError('');
     try {
       const body = { limit: 50 };
       if (cat !== 'all') body.category = cat;
-      if (searchQuery.trim()) body.q = searchQuery.trim();
 
       const res = await fetch(`${API_BASE}/api/books`, {
         method: 'POST',
@@ -61,9 +62,9 @@ export default function CustomerBooksPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [cat]);
 
-  async function loadCart() {
+  const loadCart = useCallback(async () => {
     // 3. Safety check using the prop
     if (!customerId) return;
 
@@ -80,11 +81,68 @@ export default function CustomerBooksPage() {
         setCartQty(map);
       }
     } catch (e) {
-      console.error(e);
+      console.error('Failed to load cart:', e);
     }
-  }
+  }, [customerId]);
 
-  async function addOne(isbn) {
+  const loadWishlist = useCallback(async () => {
+    if (!customerId) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/customers/${customerId}/wishlist`, {
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (data.ok && Array.isArray(data.items)) {
+        const set = {};
+        data.items.forEach((it) => {
+          set[it.isbn] = true;
+        });
+        setWishlistSet(set);
+      }
+    } catch (e) {
+      console.error('Failed to load wishlist:', e);
+    }
+  }, [customerId]);
+
+  const toggleWishlist = useCallback(async (isbn) => {
+    if (!customerId) return alert('Please log in first');
+
+    const isInWishlist = wishlistSet[isbn];
+    
+    // Optimistic update
+    setWishlistSet((prev) => {
+      const next = { ...prev };
+      if (isInWishlist) delete next[isbn];
+      else next[isbn] = true;
+      return next;
+    });
+
+    try {
+      if (isInWishlist) {
+        await fetch(`${API_BASE}/api/customers/${customerId}/wishlist/${isbn}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+      } else {
+        await fetch(`${API_BASE}/api/customers/${customerId}/wishlist/${isbn}`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+      }
+    } catch (e) {
+      console.error('Wishlist toggle failed:', e);
+      // Revert on error
+      setWishlistSet((prev) => {
+        const next = { ...prev };
+        if (isInWishlist) next[isbn] = true;
+        else delete next[isbn];
+        return next;
+      });
+    }
+  }, [customerId, wishlistSet]);
+
+  const addOne = useCallback(async (isbn) => {
     if (!customerId) return alert('Please log in first');
 
     setCartQty((prev) => ({ ...prev, [isbn]: (prev[isbn] || 0) + 1 }));
@@ -97,11 +155,11 @@ export default function CustomerBooksPage() {
         body: JSON.stringify({ isbn, qty: 1 }),
       });
     } catch (e) {
-      console.error('Add failed', e);
+      console.error('Add failed:', e);
     }
-  }
+  }, [customerId]);
 
-  async function setQty(isbn, qty) {
+  const setQty = useCallback(async (isbn, qty) => {
     if (!customerId) return;
 
     setCartQty((prev) => {
@@ -119,20 +177,23 @@ export default function CustomerBooksPage() {
         body: JSON.stringify({ qty }),
       });
     } catch (e) {
-      console.error('Update failed', e);
+      console.error('Update failed:', e);
     }
-  }
+  }, [customerId]);
 
   useEffect(() => {
     const controller = new AbortController();
     loadBooks(controller.signal);
     return () => controller.abort();
-  }, [cat]);
+  }, [loadBooks]);
 
   // 4. Update dependency: Re-load cart if customerId changes (e.g. login)
   useEffect(() => {
-    if (customerId) loadCart();
-  }, [customerId]);
+    if (customerId) {
+      loadCart();
+      loadWishlist();
+    }
+  }, [customerId, loadCart, loadWishlist]);
 
   const handlePick = (value) => {
     const picked = String(value || '').trim();
@@ -187,6 +248,8 @@ export default function CustomerBooksPage() {
             qtyInCart={cartQty[b.isbn] || 0}
             onAddOne={() => addOne(b.isbn)}
             onSetQty={(qty) => setQty(b.isbn, qty)}
+            isInWishlist={wishlistSet[b.isbn] || false}
+            onToggleWishlist={() => toggleWishlist(b.isbn)}
           />
         ))}
       </div>

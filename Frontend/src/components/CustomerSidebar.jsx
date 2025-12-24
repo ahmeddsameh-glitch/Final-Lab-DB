@@ -5,6 +5,7 @@ import {
   Receipt,
   Settings,
   LogOut,
+  Heart,
 } from 'lucide-react';
 import '../Styles/Sidebar.css';
 
@@ -41,6 +42,11 @@ export default function CustomerSidebar({ user, onLogout }) {
         <NavLink to="/c/cart" className="sbItem">
           <ShoppingCart size={18} />
           Cart
+        </NavLink>
+
+        <NavLink to="/c/wishlist" className="sbItem">
+          <Heart size={18} />
+          Wishlist
         </NavLink>
 
         <NavLink to="/c/orders" className="sbItem">

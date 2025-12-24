@@ -1,4 +1,4 @@
-import { Star, ShoppingBag, Minus, Plus, Pencil } from 'lucide-react';
+import { Star, ShoppingBag, Minus, Plus, Pencil, Heart } from 'lucide-react';
 import '../Styles/BooksPage.css';
 
 export default function BookCard({
@@ -7,6 +7,8 @@ export default function BookCard({
   onAddOne,
   onSetQty,
   onEdit,
+  isInWishlist = false,
+  onToggleWishlist,
 }) {
   const isCustomer = typeof onAddOne === 'function';
   const coverSrc =
@@ -29,6 +31,41 @@ export default function BookCard({
         <img className="bkCover" src={coverSrc} alt={book.title} />
         {/* Admin Low Stock Badge */}
         {isLowStock && <div className="bkBadge error">Low Stock</div>}
+        
+        {/* Customer Wishlist Heart */}
+        {isCustomer && onToggleWishlist && (
+          <button
+            className="bkWishlistBtn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleWishlist();
+            }}
+            aria-label={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+            style={{
+              position: 'absolute',
+              top: '8px',
+              right: '8px',
+              background: 'rgba(255, 255, 255, 0.9)',
+              border: 'none',
+              borderRadius: '50%',
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            }}
+          >
+            <Heart
+              size={20}
+              fill={isInWishlist ? '#e74c3c' : 'none'}
+              stroke={isInWishlist ? '#e74c3c' : '#666'}
+              strokeWidth={2}
+            />
+          </button>
+        )}
       </div>
 
       <div className="bkMeta">
