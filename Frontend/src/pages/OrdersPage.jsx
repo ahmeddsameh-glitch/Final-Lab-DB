@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Search,
   Filter,
@@ -28,12 +28,8 @@ export default function OrdersPage() {
   const [newOrder, setNewOrder] = useState({ isbn: '', qty: 10 });
 
   // --- EFFECTS ---
-  useEffect(() => {
-    fetchOrders();
-  }, [page, search, activeTab, refresh]);
-
   // --- API FUNCTIONS ---
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
       const query = new URLSearchParams({
@@ -58,7 +54,11 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, search, activeTab]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [page, search, activeTab, refresh, fetchOrders]);
 
   const handleConfirm = async (id) => {
     if (
@@ -83,6 +83,7 @@ export default function OrdersPage() {
         alert(data.error);
       }
     } catch (err) {
+      console.error('Failed to confirm order', err);
       alert('Failed to confirm order');
     }
   };
@@ -107,6 +108,7 @@ export default function OrdersPage() {
         alert(data.error);
       }
     } catch (err) {
+      console.error('Failed to create order', err);
       alert('Failed to create order');
     }
   };

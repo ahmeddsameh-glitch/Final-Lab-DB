@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Package, Calendar, CreditCard, X, Receipt, MapPin, User } from 'lucide-react';
+import { Package, Calendar, CreditCard, X, Receipt, MapPin, User, RotateCcw } from 'lucide-react';
+import { Download } from 'lucide-react';
 import '../Styles/MyOrders.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000';
@@ -12,12 +13,9 @@ export default function MyOrders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderDetails, setOrderDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [reorderingId, setReorderingId] = useState(null);
 
-  useEffect(() => {
-    if (user?.id) fetchOrders();
-  }, [user]);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch(`${API_BASE}/api/customers/${user.id}/orders`, {
@@ -30,20 +28,96 @@ export default function MyOrders() {
     } finally {
       setLoading(false);
     }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.id) fetchOrders();
+  }, [user?.id, fetchOrders]);
+
+  const openReceipt = (order) => {
+    setSelectedOrder(order);
+    setOrderDetails(order.items || []);
+    setLoadingDetails(false);
+
+    console.log('ORDER ITEMS:', order.items);
   };
 
-const openReceipt = (order) => {
-  setSelectedOrder(order);
-  setOrderDetails(order.items || []);
-  setLoadingDetails(false);
+  const downloadReceipt = async () => {
+    if (!selectedOrder) return;
+    const { jsPDF } = await import('jspdf');
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let y = 20;
 
-  console.log('ORDER ITEMS:', order.items);
-};
+    const safeText = (t) => String(t ?? '').toString();
 
+    doc.setFontSize(18);
+    doc.text('Order Receipt', pageWidth / 2, y, { align: 'center' });
+    y += 10;
+
+    doc.setFontSize(10);
+    doc.text(`Order #${safeText(selectedOrder.id)}`, 20, y); y += 6;
+    doc.text(`Date: ${new Date(selectedOrder.order_date).toLocaleDateString()}`, 20, y); y += 6;
+    doc.text(`Customer: ${safeText(user?.name || user?.email || 'Customer')}`, 20, y); y += 12;
+
+    doc.setFontSize(12);
+    doc.text('Items', 20, y); y += 8;
+
+    doc.setFontSize(9);
+    doc.text('Book', 20, y);
+    doc.text('Qty', 100, y);
+    doc.text('Price', 130, y);
+    doc.text('Total', 160, y);
+    y += 4;
+    doc.line(20, y, 190, y); y += 6;
+
+    (orderDetails || []).forEach((item) => {
+      const title = safeText(item.book_title).slice(0, 40);
+      const qty = Number(item.qty || 0);
+      const price = Number(item.unit_price || 0);
+      const total = qty * price;
+      doc.text(title, 20, y);
+      doc.text(String(qty), 100, y);
+      doc.text(`$${price.toFixed(2)}`, 130, y);
+      doc.text(`$${total.toFixed(2)}`, 160, y);
+      y += 6;
+      if (y > 270) { doc.addPage(); y = 20; }
+    });
+
+    y += 6; doc.line(20, y, 190, y); y += 8;
+    doc.setFontSize(11);
+    const grand = Number(selectedOrder.total_price || 0);
+    doc.text('Total:', 130, y);
+    doc.text(`$${grand.toFixed(2)}`, 160, y);
+
+    doc.save(`receipt-${safeText(selectedOrder.id)}.pdf`);
+  };
 
   const closeReceipt = () => {
     setSelectedOrder(null);
     setOrderDetails(null);
+  };
+
+  const handleReorder = async (orderId) => {
+    try {
+      setReorderingId(orderId);
+      const res = await fetch(`${API_BASE}/api/customers/${user.id}/orders/${orderId}/reorder`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (data.ok) {
+        alert('✓ Items added to cart!');
+        closeReceipt();
+      } else {
+        alert(`Error: ${data.error || 'Failed to reorder'}`);
+      }
+    } catch (error) {
+      alert('Failed to reorder. Please try again.');
+      console.error(error);
+    } finally {
+      setReorderingId(null);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -70,7 +144,7 @@ const openReceipt = (order) => {
         <div className="empty-orders">
           <Package />
           <h2>No Orders Yet</h2>
-          <p>Start shopping to see your orders here!</p>
+          <p>Start shopping to see youconstr orders here!</p>
         </div>
       </div>
     );
@@ -115,6 +189,16 @@ const openReceipt = (order) => {
               >
                 <Receipt />
                 View Receipt
+              </button>
+
+              <button
+                onClick={() => handleReorder(order.id)}
+                className="order-reorder"
+                disabled={reorderingId === order.id}
+                title="Quick reorder - adds all items to cart"
+              >
+                <RotateCcw size={18} />
+                {reorderingId === order.id ? 'Reordering...' : 'Reorder'}
               </button>
             </div>
           </div>
@@ -163,7 +247,7 @@ const openReceipt = (order) => {
                     </div>
                   </div>
 
-               
+
 
                   {/* Items */}
                   <div className="receipt-section">
@@ -220,12 +304,16 @@ const openReceipt = (order) => {
                     </div>
                   </div>
 
-                
+                  {/* Reorder Button removed from receipt view per UX preference */}
                 </>
               )}
             </div>
 
             <div className="receipt-footer">
+              <button onClick={downloadReceipt} className="receipt-download-btn">
+                <Download size={18} />
+                Download PDF
+              </button>
               <button onClick={closeReceipt} className="receipt-done-btn">
                 Done
               </button>

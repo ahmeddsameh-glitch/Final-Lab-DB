@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../Styles/SearchOverlay.css';
 import { Search, X, BookOpen, ShoppingCart, Package, User, ArrowRight, Book } from 'lucide-react';
@@ -122,25 +122,6 @@ const viewMoreBooks = () => {
       }
       if (open && e.key === 'Escape') close();
 
-      // Arrow key navigation when panel is open
-      if (open) {
-        const allItems = [
-          ...searchResults,
-          ...(!q ? trending : []),
-          ...quick.map(q => q.label)
-        ];
-        
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          setSelectedIndex(prev => (prev + 1) % allItems.length);
-        } else if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          setSelectedIndex(prev => prev <= 0 ? allItems.length - 1 : prev - 1);
-        } else if (e.key === 'Enter' && selectedIndex >= 0) {
-          e.preventDefault();
-          handleSelect(allItems[selectedIndex]);
-        }
-      }
     };
 
     const onMouseDown = (e) => {
@@ -154,14 +135,7 @@ const viewMoreBooks = () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('mousedown', onMouseDown);
     };
-  }, [open, selectedIndex, searchResults, q, trending, quick]);
 
-  useEffect(() => {
-    if (!open) {
-      setQ('');
-      setSelectedIndex(-1);
-      setSearchResults([]);
-    }
   }, [open]);
 
   const filteredTrending = useMemo(() => {
@@ -169,14 +143,25 @@ const viewMoreBooks = () => {
     return trending;
   }, [q, trending]);
 
-  const handleSelect = (value) => {
-    // If it's a book object (from search results)
-    if (value?.isbn) {
-      navigate(`/c/books?q=${encodeURIComponent(value.title)}`);
-      close();
-      return;
-    }
 
+  const filteredNewIn = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return newIn;
+    return newIn.filter((t) => t.toLowerCase().includes(s));
+  }, [q, newIn]);
+
+  // Reset search state when panel closes
+  useEffect(() => {
+    if (open) return;
+    // Use setTimeout to avoid state update during render
+    const timer = setTimeout(() => {
+      setQ('');
+      setSelectedIndex(-1);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [open]);
+
+  const handleSelect = useCallback((value) => {
     // Check if it's a quick action with a path
     const quickAction = quick.find(qa => qa.label === value);
     
@@ -215,11 +200,34 @@ const viewMoreBooks = () => {
     // Fallback to onPick callback
     onPick?.(value);
     close();
-  };
+  }, [navigate, quick, onPick]);
 
   const pick = (value) => {
     handleSelect(value);
   };
+
+  // Arrow key navigation when panel is open
+  useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (e) => {
+      const allItems = [...filteredTrending, ...filteredNewIn, ...quick.map(q => q.label)];
+      
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex(prev => (prev + 1) % allItems.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex(prev => prev <= 0 ? allItems.length - 1 : prev - 1);
+      } else if (e.key === 'Enter' && selectedIndex >= 0) {
+        e.preventDefault();
+        handleSelect(allItems[selectedIndex]);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, selectedIndex, filteredTrending, filteredNewIn, quick, handleSelect]);
 
   return (
     <div className="searchWrap">
@@ -355,12 +363,13 @@ const viewMoreBooks = () => {
           <div className="searchCol">
             <div className="searchTitle">Quick actions</div>
             <div className="searchCards">
-              {quick.map(({ icon: Icon, label, path }, idx) => {
-                const baseIdx = q.trim() ? searchResults.length : searchResults.length + filteredTrending.length;
-                const globalIdx = baseIdx + idx;
+
+              {quick.map(({ icon: Icon, label }, idx) => {
+                const globalIdx = filteredTrending.length + filteredNewIn.length + idx;
                 return (
                   <button
                     key={label}
+                    Icon={Icon}
                     className={`searchCard ${selectedIndex === globalIdx ? 'selected' : ''}`}
                     type="button"
                     onClick={() => pick(label)}
