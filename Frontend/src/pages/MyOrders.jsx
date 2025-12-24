@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Package, Calendar, CreditCard, X, Receipt, MapPin, User, RotateCcw } from 'lucide-react';
+import { Download } from 'lucide-react';
 import '../Styles/MyOrders.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000';
@@ -41,6 +42,56 @@ export default function MyOrders() {
     console.log('ORDER ITEMS:', order.items);
   };
 
+  const downloadReceipt = async () => {
+    if (!selectedOrder) return;
+    const { jsPDF } = await import('jspdf');
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let y = 20;
+
+    const safeText = (t) => String(t ?? '').toString();
+
+    doc.setFontSize(18);
+    doc.text('Order Receipt', pageWidth / 2, y, { align: 'center' });
+    y += 10;
+
+    doc.setFontSize(10);
+    doc.text(`Order #${safeText(selectedOrder.id)}`, 20, y); y += 6;
+    doc.text(`Date: ${new Date(selectedOrder.order_date).toLocaleDateString()}`, 20, y); y += 6;
+    doc.text(`Customer: ${safeText(user?.name || user?.email || 'Customer')}`, 20, y); y += 12;
+
+    doc.setFontSize(12);
+    doc.text('Items', 20, y); y += 8;
+
+    doc.setFontSize(9);
+    doc.text('Book', 20, y);
+    doc.text('Qty', 100, y);
+    doc.text('Price', 130, y);
+    doc.text('Total', 160, y);
+    y += 4;
+    doc.line(20, y, 190, y); y += 6;
+
+    (orderDetails || []).forEach((item) => {
+      const title = safeText(item.book_title).slice(0, 40);
+      const qty = Number(item.qty || 0);
+      const price = Number(item.unit_price || 0);
+      const total = qty * price;
+      doc.text(title, 20, y);
+      doc.text(String(qty), 100, y);
+      doc.text(`$${price.toFixed(2)}`, 130, y);
+      doc.text(`$${total.toFixed(2)}`, 160, y);
+      y += 6;
+      if (y > 270) { doc.addPage(); y = 20; }
+    });
+
+    y += 6; doc.line(20, y, 190, y); y += 8;
+    doc.setFontSize(11);
+    const grand = Number(selectedOrder.total_price || 0);
+    doc.text('Total:', 130, y);
+    doc.text(`$${grand.toFixed(2)}`, 160, y);
+
+    doc.save(`receipt-${safeText(selectedOrder.id)}.pdf`);
+  };
 
   const closeReceipt = () => {
     setSelectedOrder(null);
@@ -253,22 +304,16 @@ export default function MyOrders() {
                     </div>
                   </div>
 
-                  {/* Reorder Button */}
-                  <div className="receipt-section">
-                    <button
-                      onClick={() => handleReorder(selectedOrder.id)}
-                      className="reorder-btn"
-                      disabled={reorderingId === selectedOrder.id}
-                    >
-                      <RotateCcw size={18} />
-                      {reorderingId === selectedOrder.id ? 'Adding to cart...' : 'Reorder These Items'}
-                    </button>
-                  </div>
+                  {/* Reorder Button removed from receipt view per UX preference */}
                 </>
               )}
             </div>
 
             <div className="receipt-footer">
+              <button onClick={downloadReceipt} className="receipt-download-btn">
+                <Download size={18} />
+                Download PDF
+              </button>
               <button onClick={closeReceipt} className="receipt-done-btn">
                 Done
               </button>
