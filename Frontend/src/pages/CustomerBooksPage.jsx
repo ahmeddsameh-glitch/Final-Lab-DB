@@ -5,6 +5,7 @@ import ViewToggle from '../components/ViewToggle.jsx';
 import BookCard from '../components/BookCard.jsx';
 import '../Styles/BooksPage.css';
 import {useOutletContext} from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000';
 
@@ -13,6 +14,8 @@ export default function CustomerBooksPage() {
   const { user } = useOutletContext();
   // 2. Get Customer ID directly from the user object (Safe & Reactive)
   const customerId = user?.id;
+
+  const [searchParams] = useSearchParams();
 
   const [cat, setCat] = useState('all');
   const [view, setView] = useState('grid');
@@ -124,10 +127,19 @@ export default function CustomerBooksPage() {
   }
 
   useEffect(() => {
-    const controller = new AbortController();
-    loadBooks(controller.signal);
-    return () => controller.abort();
-  }, [cat]);
+  const q = searchParams.get('q');
+  if (q) {
+    setSearchQuery(q);
+    setCat('all'); // reset category so search is not blocked
+  }
+}, [searchParams]);
+
+useEffect(() => {
+  const controller = new AbortController();
+  loadBooks(controller.signal);
+  return () => controller.abort();
+}, [cat, searchQuery]);
+
 
   // 4. Update dependency: Re-load cart if customerId changes (e.g. login)
   useEffect(() => {

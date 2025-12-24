@@ -460,3 +460,73 @@
   border-right: none;
         padding: 14px;
 }
+/* Book search results */
+.search-results-col {
+  grid-column: span 2;
+}
+
+.searchCard.book-result {
+  align-items: flex-start;
+  min-height: 80px;
+}
+
+.searchCardCover {
+  width: 48px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  flex-shrink: 0;
+}
+
+.searchCardText {
+  flex: 1;
+  text-align: left;
+}
+
+.searchCardMeta {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+/* Selected/Highlighted state */
+.searchItem.selected,
+.searchCard.selected {
+  background: rgba(91, 91, 255, 0.12) !important;
+  border-color: rgba(91, 91, 255, 0.35) !important;
+  box-shadow: 0 16px 40px rgba(79, 70, 229, 0.15) !important;
+  transform: translateY(-1px);
+}
+
+.searchItem.selected .label,
+.searchCard.selected .searchCardLabel {
+  color: var(--accent);
+}
+
+.searchItem.selected .dot {
+  transform: scale(1.2);
+}
+
+/* Responsive for search results */
+@media (max-width: 860px) {
+  .search-results-col {
+    grid-column: span 1;
+  }
+}
+.searchViewMore {
+  margin-top: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: none;
+  background: #111;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.searchViewMore:hover {
+  background: #000;
+}
