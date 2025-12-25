@@ -53,10 +53,10 @@ export default function CustomerBooksPage() {
   const sortOptions = useMemo(() => ([
     { value: 'newest', label: 'Newest' },
     { value: 'title', label: 'Title A-Z' },
+    { value: 'title_desc', label: 'Title Z-A' },
     { value: 'price', label: 'Price Low-High' },
     { value: 'price_desc', label: 'Price High-Low' },
     { value: 'year', label: 'Publication Year' },
-    { value: 'stock_low', label: 'Lowest Stock' },
   ]), []);
 
   const loadBooks = useCallback(async (signal) => {
