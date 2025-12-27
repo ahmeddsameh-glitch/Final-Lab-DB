@@ -397,6 +397,11 @@ export default function BooksPage() {
 
             <form onSubmit={handleAddBook}>
               <div className="modal-body">
+                {addBookError && (
+                  <div style={{ color: 'red', marginBottom: '10px', textAlign: 'center' }}>
+                    {addBookError}
+                  </div>
+                )}
                 <div className="form-group">
                   <label>ISBN (13 Digits)</label>
                   <input

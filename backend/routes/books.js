@@ -65,15 +65,17 @@ router.post('/', async (req, res) => {
             sql += ` AND (LOWER(b.title) LIKE ?)`;
             params.push(`%${q_title.toLowerCase()}%`);
         }
-        // General search: title, author name, or publisher name (case-insensitive)
+        // General search: title, author name, publisher name, or ISBN (case-insensitive, partial match allowed for ISBN)
         else if (q) {
             const qLower = q.toLowerCase();
-            sql += ` AND (
-                LOWER(b.title) LIKE ? OR
-                LOWER(a.full_name) LIKE ? OR
-                LOWER(p.name) LIKE ?
-            )`;
-            params.push(`%${qLower}%`, `%${qLower}%`, `%${qLower}%`);
+            // If q is all digits and length <= 13, allow partial ISBN match
+            if (/^\d{1,13}$/.test(q)) {
+                sql += ` AND (b.isbn LIKE ? OR LOWER(b.title) LIKE ? OR LOWER(a.full_name) LIKE ? OR LOWER(p.name) LIKE ?)`;
+                params.push(`%${q}%`, `%${qLower}%`, `%${qLower}%`, `%${qLower}%`);
+            } else {
+                sql += ` AND (LOWER(b.title) LIKE ? OR LOWER(a.full_name) LIKE ? OR LOWER(p.name) LIKE ?)`;
+                params.push(`%${qLower}%`, `%${qLower}%`, `%${qLower}%`);
+            }
         }
 
         // Filter by category (case-insensitive)
@@ -120,6 +122,8 @@ router.post('/', async (req, res) => {
             sql += ` ORDER BY b.title DESC, b.isbn DESC`;
         } else if (sort_by === 'year') {
             sql += ` ORDER BY b.publication_year DESC, b.isbn DESC`;
+        } else if (sort_by === 'stock_low') {
+            sql += ` ORDER BY b.stock_qty ASC, b.isbn DESC`;
         } else {
             // default: newest first
             sql += ` ORDER BY b.created_at DESC, b.isbn DESC`;
