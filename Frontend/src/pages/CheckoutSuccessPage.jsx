@@ -3,19 +3,48 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, Package, ArrowRight } from 'lucide-react';
 import '../Styles/CheckoutSuccessPage.css';
 
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000';
+
 export default function CheckoutSuccessPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get('session_id');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    // Give the webhook a moment to process
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
+    const completeOrder = async () => {
+      if (!sessionId) {
+        setError('Invalid session');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/checkout/complete-order`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ session_id: sessionId }),
+        });
+
+        const data = await res.json();
+        
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to complete order');
+        }
+
+        console.log('✅ Order completed:', data);
+      } catch (e) {
+        console.error('Error completing order:', e);
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    completeOrder();
+  }, [sessionId]);
 
   return (
     <div className="successPage">
@@ -36,6 +65,13 @@ export default function CheckoutSuccessPage() {
             <p className="successMessage">
               Thank you for your purchase. Your order has been confirmed and will be processed shortly.
             </p>
+
+            {error && (
+              <div className="successError">
+                <p>Note: {error}</p>
+                <p>Your payment was successful, but there was an issue creating the order record. Please contact support with your session ID below.</p>
+              </div>
+            )}
 
             {sessionId && (
               <div className="successDetails">

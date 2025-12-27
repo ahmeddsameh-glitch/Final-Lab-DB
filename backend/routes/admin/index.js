@@ -4,6 +4,7 @@ const router = express.Router();
 // Import all admin sub-routers
 const reportsRouter = require("./reports");
 const publisherOrdersRouter = require("./publisherOrders");
+const customerOrdersRouter = require("./customerOrders");
 
 const booksRouter = require("./books");
 const customersRouter = require("./customers");
@@ -11,6 +12,7 @@ const customersRouter = require("./customers");
 // Mount each router at its respective path
 router.use("/reports", reportsRouter);
 router.use("/publisher-orders", publisherOrdersRouter);
+router.use("/customer-orders", customerOrdersRouter);
 
 router.use("/books", booksRouter);
 router.use("/customers", customersRouter);
