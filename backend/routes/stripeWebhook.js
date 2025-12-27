@@ -1,4 +1,4 @@
-const stripe = require("../stripe");
+const stripe = require("./stripe");
 const pool = require("../db");
 
 module.exports = async (req, res) => {
