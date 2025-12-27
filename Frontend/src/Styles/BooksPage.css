@@ -1,4 +1,4 @@
-  /* Pinned toggle bar for AdminCustomersPage */
+/* Pinned toggle bar for AdminCustomersPage */
   .toggleBarPinned {
     position: fixed;
     top: 24px;
@@ -562,6 +562,10 @@
     border-radius: 99px;
     text-transform: uppercase;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.bkBadge.error {
+    background: linear-gradient(90deg, #f59e42 60%, #fbbf24 100%);
+    color: #fffbe6;
 }
 
 /* --- MODAL STYLES (Appended) --- */

@@ -284,6 +284,12 @@
   line-height: 1.55;
 }
 
+.authError {
+  margin: 6px 0 0;
+  color: #ff6b6b;
+  font-size: 13px;
+}
+
 .authBtnGhost {
   height: 44px;
   border-radius: 14px;

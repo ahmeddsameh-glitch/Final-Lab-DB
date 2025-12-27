@@ -1,5 +1,5 @@
 const express = require('express');
-const stripe = require('../stripe');
+const stripe = require('./stripe');
 const pool = require('../db');
 const { verifyToken } = require('../middleware/auth');
 
