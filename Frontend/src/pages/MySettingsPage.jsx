@@ -89,7 +89,10 @@ export default function MySettingsPage({ user, onUserChange }) {
         created_at: p.created_at || '',
       });
     } catch (e) {
-      setMessage({ type: 'error', text: e.message || 'Failed to load profile' });
+      setMessage({
+        type: 'error',
+        text: e.message || 'Failed to load profile',
+      });
     } finally {
       setLoading(false);
     }
@@ -102,7 +105,8 @@ export default function MySettingsPage({ user, onUserChange }) {
     if (!profile.last_name.trim()) next.last_name = 'Last name is required';
     if (!profile.username.trim()) next.username = 'Username is required';
     if (!profile.phone.trim()) next.phone = 'Phone is required';
-    if (!profile.shipping_address.trim()) next.shipping_address = 'Address is required';
+    if (!profile.shipping_address.trim())
+      next.shipping_address = 'Address is required';
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -121,6 +125,7 @@ export default function MySettingsPage({ user, onUserChange }) {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
+          username: profile.username,
           first_name: profile.first_name,
           last_name: profile.last_name,
           email: profile.email,
@@ -145,7 +150,10 @@ export default function MySettingsPage({ user, onUserChange }) {
       }
       setErrors({});
     } catch (e) {
-      setMessage({ type: 'error', text: e.message || 'Failed to update profile' });
+      setMessage({
+        type: 'error',
+        text: e.message || 'Failed to update profile',
+      });
     } finally {
       setSavingProfile(false);
     }
@@ -154,7 +162,8 @@ export default function MySettingsPage({ user, onUserChange }) {
   function validatePassword() {
     const next = {};
 
-    if (!passwords.old_password) next.old_password = 'Current password required';
+    if (!passwords.old_password)
+      next.old_password = 'Current password required';
     if (!passwords.new_password) next.new_password = 'New password required';
     if (passwords.new_password && passwords.new_password.length < 6) {
       next.new_password = 'Password must be at least 6 characters';
@@ -189,10 +198,17 @@ export default function MySettingsPage({ user, onUserChange }) {
       if (!data.ok) throw new Error(data.error || 'Password change failed');
 
       setMessage({ type: 'success', text: 'Password changed successfully.' });
-      setPasswords({ old_password: '', new_password: '', confirm_password: '' });
+      setPasswords({
+        old_password: '',
+        new_password: '',
+        confirm_password: '',
+      });
       setErrors({});
     } catch (e) {
-      setMessage({ type: 'error', text: e.message || 'Failed to change password' });
+      setMessage({
+        type: 'error',
+        text: e.message || 'Failed to change password',
+      });
     } finally {
       setSavingPass(false);
     }
@@ -240,16 +256,26 @@ export default function MySettingsPage({ user, onUserChange }) {
         credentials: 'include',
       });
       const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.error || `Upload failed (${res.status})`);
-      setProfile((prev) => ({ ...prev, avatar_url: data.avatar_url || prev.avatar_url }));
+      if (!res.ok || !data.ok)
+        throw new Error(data.error || `Upload failed (${res.status})`);
+      setProfile((prev) => ({
+        ...prev,
+        avatar_url: data.avatar_url || prev.avatar_url,
+      }));
       if (onUserChange) {
-        onUserChange({ ...user, avatar_url: data.avatar_url || profile.avatar_url });
+        onUserChange({
+          ...user,
+          avatar_url: data.avatar_url || profile.avatar_url,
+        });
       }
       setAvatarPreview(null);
       setAvatarFile(null);
       setMessage({ type: 'success', text: 'Avatar uploaded successfully.' });
     } catch (e) {
-      setMessage({ type: 'error', text: e.message || 'Failed to upload avatar' });
+      setMessage({
+        type: 'error',
+        text: e.message || 'Failed to upload avatar',
+      });
     }
   }
 
@@ -297,8 +323,16 @@ export default function MySettingsPage({ user, onUserChange }) {
         </div>
 
         {message && (
-          <div className={`msAlert ${message.type === 'success' ? 'msAlertOk' : 'msAlertBad'}`}>
-            {message.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+          <div
+            className={`msAlert ${
+              message.type === 'success' ? 'msAlertOk' : 'msAlertBad'
+            }`}
+          >
+            {message.type === 'success' ? (
+              <CheckCircle size={18} />
+            ) : (
+              <AlertCircle size={18} />
+            )}
             <span>{message.text}</span>
           </div>
         )}
@@ -311,14 +345,27 @@ export default function MySettingsPage({ user, onUserChange }) {
             <div className="msAvatarRow">
               <div className="msAvatarWrap">
                 {avatarPreview ? (
-                  <img className="msAvatarImg" src={avatarPreview} alt="avatar preview" />
+                  <img
+                    className="msAvatarImg"
+                    src={avatarPreview}
+                    alt="avatar preview"
+                  />
                 ) : profile.avatar_url ? (
-                  <img className="msAvatarImg" src={resolveAvatar(profile.avatar_url)} alt="avatar" />
+                  <img
+                    className="msAvatarImg"
+                    src={resolveAvatar(profile.avatar_url)}
+                    alt="avatar"
+                  />
                 ) : (
                   <div className="msAvatar">{initials}</div>
                 )}
 
-                <button className="msCamBtn" type="button" onClick={onPickAvatar} title="Upload avatar">
+                <button
+                  className="msCamBtn"
+                  type="button"
+                  onClick={onPickAvatar}
+                  title="Upload avatar"
+                >
                   <Camera size={16} />
                 </button>
 
@@ -332,7 +379,7 @@ export default function MySettingsPage({ user, onUserChange }) {
               </div>
 
               <div className="msAvatarInfo">
-                 <div className="msTiny">Camera button opens the picker.</div>
+                <div className="msTiny">Camera button opens the picker.</div>
                 <div className="msSub">JPG or PNG. Max size 2MB.</div>
                 <button
                   className="msBtn msBtnPrimary"
@@ -358,11 +405,15 @@ export default function MySettingsPage({ user, onUserChange }) {
                     <User size={16} />
                     <input
                       value={profile.first_name}
-                      onChange={(e) => setProfile({ ...profile, first_name: e.target.value })}
+                      onChange={(e) =>
+                        setProfile({ ...profile, first_name: e.target.value })
+                      }
                       placeholder="First name"
                     />
                   </div>
-                  {errors.first_name && <div className="msErr">{errors.first_name}</div>}
+                  {errors.first_name && (
+                    <div className="msErr">{errors.first_name}</div>
+                  )}
                 </div>
 
                 <div className="msField">
@@ -371,11 +422,15 @@ export default function MySettingsPage({ user, onUserChange }) {
                     <User size={16} />
                     <input
                       value={profile.last_name}
-                      onChange={(e) => setProfile({ ...profile, last_name: e.target.value })}
+                      onChange={(e) =>
+                        setProfile({ ...profile, last_name: e.target.value })
+                      }
                       placeholder="Last name"
                     />
                   </div>
-                  {errors.last_name && <div className="msErr">{errors.last_name}</div>}
+                  {errors.last_name && (
+                    <div className="msErr">{errors.last_name}</div>
+                  )}
                 </div>
               </div>
 
@@ -394,11 +449,15 @@ export default function MySettingsPage({ user, onUserChange }) {
                   <AtSign size={16} />
                   <input
                     value={profile.username}
-                    onChange={(e) => setProfile({ ...profile, username: e.target.value })}
+                    onChange={(e) =>
+                      setProfile({ ...profile, username: e.target.value })
+                    }
                     placeholder="username"
                   />
                 </div>
-                {errors.username && <div className="msErr">{errors.username}</div>}
+                {errors.username && (
+                  <div className="msErr">{errors.username}</div>
+                )}
               </div>
 
               <div className="msTwo">
@@ -408,7 +467,9 @@ export default function MySettingsPage({ user, onUserChange }) {
                     <Phone size={16} />
                     <input
                       value={profile.phone}
-                      onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                      onChange={(e) =>
+                        setProfile({ ...profile, phone: e.target.value })
+                      }
                       placeholder="+20 ..."
                     />
                   </div>
@@ -422,16 +483,26 @@ export default function MySettingsPage({ user, onUserChange }) {
                     <input
                       value={profile.shipping_address}
                       onChange={(e) =>
-                        setProfile({ ...profile, shipping_address: e.target.value })
+                        setProfile({
+                          ...profile,
+                          shipping_address: e.target.value,
+                        })
                       }
                       placeholder="Street, City"
                     />
                   </div>
-                  {errors.shipping_address && <div className="msErr">{errors.shipping_address}</div>}
+                  {errors.shipping_address && (
+                    <div className="msErr">{errors.shipping_address}</div>
+                  )}
                 </div>
               </div>
 
-              <button className="msBtn msBtnPrimary" type="button" onClick={handleProfileUpdate} disabled={savingProfile}>
+              <button
+                className="msBtn msBtnPrimary"
+                type="button"
+                onClick={handleProfileUpdate}
+                disabled={savingProfile}
+              >
                 <Save size={18} /> {savingProfile ? 'Saving…' : 'Save changes'}
               </button>
             </div>
@@ -448,9 +519,13 @@ export default function MySettingsPage({ user, onUserChange }) {
                   className="msPlain"
                   type="password"
                   value={passwords.old_password}
-                  onChange={(e) => setPasswords({ ...passwords, old_password: e.target.value })}
+                  onChange={(e) =>
+                    setPasswords({ ...passwords, old_password: e.target.value })
+                  }
                 />
-                {errors.old_password && <div className="msErr">{errors.old_password}</div>}
+                {errors.old_password && (
+                  <div className="msErr">{errors.old_password}</div>
+                )}
               </div>
 
               <div className="msTwo">
@@ -460,9 +535,16 @@ export default function MySettingsPage({ user, onUserChange }) {
                     className="msPlain"
                     type="password"
                     value={passwords.new_password}
-                    onChange={(e) => setPasswords({ ...passwords, new_password: e.target.value })}
+                    onChange={(e) =>
+                      setPasswords({
+                        ...passwords,
+                        new_password: e.target.value,
+                      })
+                    }
                   />
-                  {errors.new_password && <div className="msErr">{errors.new_password}</div>}
+                  {errors.new_password && (
+                    <div className="msErr">{errors.new_password}</div>
+                  )}
                 </div>
 
                 <div className="msField">
@@ -471,14 +553,27 @@ export default function MySettingsPage({ user, onUserChange }) {
                     className="msPlain"
                     type="password"
                     value={passwords.confirm_password}
-                    onChange={(e) => setPasswords({ ...passwords, confirm_password: e.target.value })}
+                    onChange={(e) =>
+                      setPasswords({
+                        ...passwords,
+                        confirm_password: e.target.value,
+                      })
+                    }
                   />
-                  {errors.confirm_password && <div className="msErr">{errors.confirm_password}</div>}
+                  {errors.confirm_password && (
+                    <div className="msErr">{errors.confirm_password}</div>
+                  )}
                 </div>
               </div>
 
-              <button className="msBtn msBtnDark" type="button" onClick={handlePasswordChange} disabled={savingPass}>
-                <Lock size={18} /> {savingPass ? 'Changing…' : 'Change password'}
+              <button
+                className="msBtn msBtnDark"
+                type="button"
+                onClick={handlePasswordChange}
+                disabled={savingPass}
+              >
+                <Lock size={18} />{' '}
+                {savingPass ? 'Changing…' : 'Change password'}
               </button>
             </div>
           </div>
